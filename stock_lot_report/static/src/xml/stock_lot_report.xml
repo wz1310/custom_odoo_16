@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="stock_lot_report.client_template" owl="1">
+        <div class="o_action h-100" style="display:flex; flex-direction:column;">
+
+            <!-- TOPBAR (OWL-rendered, fully reactive) -->
+            <div class="slr-topbar" style="
+                background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%);
+                padding: 12px 24px; display: flex; align-items: center; gap: 16px;
+                box-shadow: 0 4px 20px rgba(15,118,110,0.4); flex-shrink:0; flex-wrap:wrap;
+            ">
+                <!-- Title -->
+                <div>
+                    <div style="color:white; font-size:15px; font-weight:700; margin:0;">&#128230; Stock Lot Report</div>
+                    <div style="color:rgba(255,255,255,0.65); font-size:11px;" t-esc="state.date_label"/>
+                </div>
+
+                <!-- Filters -->
+                <div style="display:flex; align-items:flex-end; gap:10px; flex:1; justify-content:center; flex-wrap:wrap;">
+
+                    <!-- Date -->
+                    <div style="display:flex; flex-direction:column;">
+                        <label style="font-size:9px; color:rgba(255,255,255,0.6); font-weight:600; text-transform:uppercase; margin-bottom:2px;">Cek Per Tanggal</label>
+                        <input type="date" t-att-value="state.check_date"
+                            style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); color:white; border-radius:6px; padding:5px 10px; font-size:12px; width:150px;"
+                            t-on-change="onDateChange"/>
+                    </div>
+
+                    <!-- Group By multi-select chip box -->
+                    <div style="display:flex; flex-direction:column; position:relative;">
+                        <label style="font-size:9px; color:rgba(255,255,255,0.6); font-weight:600; text-transform:uppercase; margin-bottom:2px;">Group By</label>
+                        <div style="
+                            min-width:200px; min-height:32px;
+                            background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25);
+                            border-radius:6px; padding:3px 8px; display:flex; flex-wrap:wrap;
+                            align-items:center; gap:4px; cursor:pointer; position:relative;
+                        " t-on-click="toggleGroupDropdown">
+                            <!-- Active group badges -->
+                            <t t-if="state.group_by">
+                                <span style="
+                                    display:inline-flex; align-items:center; gap:4px;
+                                    background:rgba(255,255,255,0.25); border-radius:12px;
+                                    padding:2px 8px; font-size:11px; font-weight:600; color:white;
+                                " t-on-click.stop="() => this.removeGroup(1)">
+                                    <t t-esc="groupLabel(state.group_by)"/>
+                                    <span style="opacity:0.7; font-size:12px; line-height:1;">&#10005;</span>
+                                </span>
+                            </t>
+                            <t t-if="state.group_by2">
+                                <span style="
+                                    display:inline-flex; align-items:center; gap:4px;
+                                    background:rgba(255,255,255,0.15); border-radius:12px;
+                                    padding:2px 8px; font-size:11px; font-weight:600; color:rgba(255,255,255,0.85);
+                                " t-on-click.stop="() => this.removeGroup(2)">
+                                    <t t-esc="groupLabel(state.group_by2)"/>
+                                    <span style="opacity:0.7; font-size:12px; line-height:1;">&#10005;</span>
+                                </span>
+                            </t>
+                            <span t-if="!state.group_by" style="color:rgba(255,255,255,0.45); font-size:12px;">Pilih group...</span>
+                            <!-- Arrow -->
+                            <span style="margin-left:auto; color:rgba(255,255,255,0.6); font-size:10px;">&#9660;</span>
+                        </div>
+
+                        <!-- Dropdown options -->
+                        <t t-if="state.groupDropdownOpen">
+                            <div style="
+                                position:absolute; top:calc(100% + 4px); left:0; z-index:999;
+                                background:white; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.15);
+                                min-width:180px; overflow:hidden;
+                            " t-on-click.stop="">
+                                <div style="padding:6px 0;">
+                                    <t t-foreach="groupOptions" t-as="opt" t-key="opt.value">
+                                        <div t-on-click="() => this.selectGroup(opt.value)"
+                                            t-att-style="'padding:8px 14px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; ' + (isGroupSelected(opt.value) ? 'background:#f0fdf4; color:#0f766e; font-weight:600;' : 'color:#374151;')">
+                                            <span t-esc="opt.label"/>
+                                            <t t-if="isGroupSelected(opt.value)">
+                                                <span style="font-size:10px; background:#ccfbf1; color:#0f766e; border-radius:10px; padding:1px 6px;">
+                                                    L<t t-esc="getGroupLevel(opt.value)"/>
+                                                </span>
+                                            </t>
+                                        </div>
+                                    </t>
+                                </div>
+                            </div>
+                        </t>
+                    </div>
+
+                    <button t-on-click="applyFilter" style="
+                        border:none; border-radius:8px; padding:7px 14px; font-size:12px; font-weight:600;
+                        cursor:pointer; background:white; color:#0f766e; display:inline-flex; align-items:center; gap:6px;
+                    ">&#128269; Filter</button>
+                </div>
+
+                <!-- Export -->
+                <button t-on-click="exportExcel" style="
+                    border:none; border-radius:8px; padding:7px 14px; font-size:12px; font-weight:600;
+                    cursor:pointer; background:#16a34a; color:white; display:inline-flex; align-items:center; gap:6px;
+                    margin-left:auto;
+                ">&#128196; Export Excel</button>
+            </div>
+
+            <!-- CONTENT -->
+            <div class="o_content" style="overflow-y:auto; flex:1;" t-on-click="handleContentClick">
+                <t t-if="state.loading">
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:12px;">
+                        <div style="width:36px; height:36px; border:3px solid #ccfbf1; border-top-color:#0f766e; border-radius:50%; animation:slr-spin 0.8s linear infinite;"></div>
+                        <span style="color:#94a3b8; font-size:13px;">Memuat laporan stok...</span>
+                        <style>@keyframes slr-spin { to { transform: rotate(360deg); } }</style>
+                    </div>
+                </t>
+                <t t-else="">
+                    <t t-out="state.html_content"/>
+                </t>
+            </div>
+        </div>
+    </t>
+</templates>

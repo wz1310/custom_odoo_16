@@ -1,0 +1,437 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Main Dashboard Template -->
+    <t t-name="sales_analytics_dashboard.dashboard_template" owl="1">
+        <div class="sales-analytics-root" t-att-class="state.isDarkMode ? 'dark-mode' : 'light-mode'">
+            
+            <!-- Sidebar (Mobile Filters) -->
+            <div class="sales-sidebar-overlay" t-if="state.isSidebarOpen" t-on-click="this.toggleSidebar"></div>
+            <aside class="sales-sidebar" t-att-class="{'open': state.isSidebarOpen}">
+                <div class="sales-sidebar-header">
+                    <h3>Analytics Filters</h3>
+                    <button class="sales-sidebar-close" t-on-click="this.toggleSidebar">×</button>
+                </div>
+                <div class="sales-sidebar-content">
+                    <div class="sales-sidebar-section mobile-only">
+                        <label>Search</label>
+                        <div class="sales-header-search">
+                            <i class="fa fa-search"></i>
+                            <input type="text" 
+                                   placeholder="Search analytics..."
+                                   t-model="this.state.searchText"
+                                   t-on-input="(e) => this.search(e.target.value)"/>
+                        </div>
+                    </div>
+                    <div class="sales-sidebar-section">
+                        <label>Date Range</label>
+                        <div class="sales-date-range">
+                            <input type="date" name="date_from_sidebar" 
+                                   t-att-value="state.dateFrom"
+                                   class="sales-input"
+                                   t-on-input="(e) => this.state.dateFrom = e.target.value"/>
+                            <span>to</span>
+                            <input type="date" name="date_to_sidebar" 
+                                   t-att-value="state.dateTo"
+                                   class="sales-input"
+                                   t-on-input="(e) => this.state.dateTo = e.target.value"/>
+                        </div>
+                    </div>
+                    <div class="sales-sidebar-section">
+                        <label>Group By</label>
+                        <div class="sales-groupby-container">
+                            <t t-foreach="state.activeGroups" t-as="group" t-key="group">
+                                <span class="sales-badge">
+                                    <t t-esc="getGroupLabel(group)"/>
+                                    <button class="sales-badge-remove" 
+                                            t-on-click="() => this.removeGroup(group)">
+                                        ×
+                                    </button>
+                                </span>
+                            </t>
+                            <div class="sales-dropdown">
+                                <button class="sales-add-btn" t-on-click="this.toggleDropdown">
+                                    + Add Group
+                                </button>
+                                <div class="sales-dropdown-menu">
+                                    <div class="sales-dropdown-item" t-on-click="() => this.addGroup('customer')">👥 Customer</div>
+                                    <div class="sales-dropdown-item" t-on-click="() => this.addGroup('product')">📦 Product</div>
+                                    <div class="sales-dropdown-item" t-on-click="() => this.addGroup('salesperson')">👤 Salesperson</div>
+                                    <div class="sales-dropdown-item" t-on-click="() => this.addGroup('team')">🏷️ Team</div>
+                                    <div class="sales-dropdown-item" t-on-click="() => this.addGroup('category')">🏷️ Category</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sales-sidebar-actions">
+                        <button class="sales-btn sales-btn-primary" t-on-click="() => { this.applyFilters(); this.toggleSidebar(); }">
+                            Apply Filters
+                        </button>
+                        <button class="sales-btn sales-btn-secondary" 
+                                t-on-click="() => { this.clearFilters(); this.toggleSidebar(); }">
+                            Clear Filters
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Header Section -->
+            <header class="sales-header">
+                <div class="sales-header-bg">
+                    <div class="mesh-blob blob-1"></div>
+                    <div class="mesh-blob blob-2"></div>
+                    <div class="mesh-blob blob-3"></div>
+                </div>
+                <div class="sales-header-content">
+                    <div class="sales-header-left">
+                        <button class="sales-burger-btn" t-on-click="this.toggleSidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <div class="sales-logo-container">
+                            <span class="sales-icon">🚀</span>
+                        </div>
+                        <div class="sales-title-group">
+                            <h1 class="sales-title">Sales Analytics</h1>
+                            <p class="sales-subtitle" t-esc="state.periodLabel or 'Live Insights'"/>
+                        </div>
+                    </div>
+
+                    <div class="sales-header-center desktop-only">
+                        <div class="sales-header-filters">
+                            <div class="sales-header-search">
+                                <i class="fa fa-search"></i>
+                                <input type="text" 
+                                       placeholder="Search analytics..." 
+                                       t-model="this.state.searchText"
+                                       t-on-input="(e) => this.search(e.target.value)"/>
+                            </div>
+                            <div class="sales-v-divider"></div>
+                            <div class="sales-header-date">
+                                <input type="date" name="date_from" t-att-value="state.dateFrom" t-on-input="(e) => state.dateFrom = e.target.value" class="sales-compact-input"/>
+                                <span>-</span>
+                                <input type="date" name="date_to" t-att-value="state.dateTo" t-on-input="(e) => state.dateTo = e.target.value" class="sales-compact-input"/>
+                            </div>
+                            <div class="sales-v-divider"></div>
+                            <div class="sales-header-groups">
+                                <div class="sales-dropdown">
+                                    <button class="sales-compact-add-btn" t-on-click="this.toggleDropdown" t-att-class="{'has-active': state.activeGroups.length > 0}">
+                                        <i class="fa fa-layer-group"></i>
+                                        <span>Group <t t-if="state.activeGroups.length > 0">(<t t-esc="state.activeGroups.length"/>)</t></span>
+                                    </button>
+                                    <div class="sales-dropdown-menu">
+                                        <t t-set="groups" t-value="[['customer', '👥 Customer'], ['product', '📦 Product'], ['salesperson', '👤 Salesperson'], ['team', '🏷️ Team'], ['category', '🏷️ Category']]"/>
+                                        <t t-foreach="groups" t-as="group" t-key="group[0]">
+                                            <div class="sales-dropdown-item" 
+                                                 t-att-class="{'active': state.activeGroups.includes(group[0])}"
+                                                 t-on-click="() => state.activeGroups.includes(group[0]) ? this.removeGroup(group[0]) : this.addGroup(group[0])">
+                                                <span class="sales-item-label" t-esc="group[1]"/>
+                                                <i t-if="state.activeGroups.includes(group[0])" class="fa fa-times sales-item-remove"></i>
+                                            </div>
+                                        </t>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="sales-v-divider"></div>
+                            <div class="sales-header-filter-btns">
+                                <button class="sales-btn-mini-primary" t-on-click="this.applyFilters" title="Apply Filters">
+                                    <i class="fa fa-check"></i>
+                                </button>
+                                <button class="sales-btn-mini-secondary" t-on-click="this.clearFilters" title="Clear Filters">
+                                    <i class="fa fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sales-header-right">
+                        <div class="sales-header-actions">
+                            <button class="sales-btn-blur" 
+                                    t-on-click="this.toggleDarkMode"
+                                    t-att-title="state.isDarkMode ? 'Light Mode' : 'Dark Mode'">
+                                <span t-esc="state.isDarkMode ? '☀️' : '🌙'"/>
+                            </button>
+                            <button class="sales-btn-glass desktop-only" t-on-click="this.exportExcel">
+                                <i class="fa fa-download"></i>
+                                <span>Export</span>
+                            </button>
+                            <button class="sales-btn-glow" 
+                                    t-on-click="this.loadData"
+                                    t-att-class="{'loading': state.loading}">
+                                <i class="fa fa-refresh"></i>
+                                <span class="desktop-only">Refresh</span>
+                            </button>
+                        </div>
+                        <div class="sales-status-indicator desktop-only" t-if="state.lastUpdate">
+                            <span class="pulse-dot"></span>
+                            <span>Updated <t t-esc="state.lastUpdate.toLocaleTimeString()"/></span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Loading State -->
+            <t t-if="state.loading">
+                <div class="sales-loading">
+                    <div class="sales-spinner"></div>
+                    <p>Loading analytics data...</p>
+                </div>
+            </t>
+
+            <!-- Main Content -->
+            <t t-else="">
+                <!-- KPI Cards -->
+                <SalesKPI kpi="state.kpi"/>
+
+
+
+                <!-- Top Metrics -->
+                <section class="sales-top-metrics">
+                    <div class="sales-metrics-grid">
+                        <div class="sales-metric-card">
+                            <h4>🏆 Top Customers</h4>
+                            <div class="sales-metric-list">
+                                <t t-foreach="state.topCustomers" t-as="customer" t-key="customer[0]">
+                                    <div class="sales-metric-item">
+                                        <span t-esc="customer[0]"/>
+                                        <span class="sales-metric-value" 
+                                              t-esc="formatCurrency(customer[1])"/>
+                                    </div>
+                                </t>
+                            </div>
+                        </div>
+                        <div class="sales-metric-card">
+                            <h4>⭐ Top Products</h4>
+                            <div class="sales-metric-list">
+                                <t t-foreach="state.topProducts" t-as="product" t-key="product[0]">
+                                    <div class="sales-metric-item">
+                                        <span t-esc="product[0]"/>
+                                        <span class="sales-metric-value" 
+                                              t-esc="formatCurrency(product[1])"/>
+                                    </div>
+                                </t>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Data Table -->
+                <section class="sales-table-section">
+                    <div class="sales-table-header">
+                        <h3>📋 Sales Detail</h3>
+                        <div class="sales-table-actions">
+                            <input type="text" 
+                                   placeholder="Search..."
+                                   class="sales-search"
+                                   t-on-input="(e) => this.search(e.target.value)"/>
+                        </div>
+                    </div>
+                    <SalesTable 
+                        lines="state.allLines"
+                        groups="state.activeGroups"
+                        analyticsData="state.analyticsData"/>
+                </section>
+            </t>
+        </div>
+    </t>
+
+    <!-- Chart Template -->
+    <t t-name="sales_analytics_dashboard.chart_template" owl="1">
+        <div class="sales-chart-container">
+            <div class="sales-trend-chart">
+                <h4>Monthly Revenue Trend</h4>
+                <div class="sales-chart-bars">
+                    <t t-foreach="Object.keys(props.trends)" t-as="month" t-key="month">
+                        <div class="sales-chart-bar">
+                            <div class="sales-bar-value" 
+                                 t-esc="this.formatCurrency(props.trends[month].revenue)"/>
+                            <div class="sales-bar-inner" 
+                                 t-att-style="'height: 0%;'"></div>
+                            <div class="sales-bar-label" t-esc="month"/>
+                        </div>
+                    </t>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <!-- KPI Template -->
+    <t t-name="sales_analytics_dashboard.kpi_template" owl="1">
+        <div class="sales-kpi-grid">
+            <div class="sales-kpi-card" data-kpi="total_revenue" t-att-data-value="props.kpi.total_revenue">
+                <div class="sales-kpi-icon">💰</div>
+                <div class="sales-kpi-info">
+                    <h4>Total Revenue</h4>
+                    <p t-esc="this.formatCurrency(props.kpi.total_revenue)"/>
+                </div>
+            </div>
+            <div class="sales-kpi-card" data-kpi="total_orders" t-att-data-value="props.kpi.total_orders">
+                <div class="sales-kpi-icon">📦</div>
+                <div class="sales-kpi-info">
+                    <h4>Total Orders</h4>
+                    <p t-esc="this.formatNumber(props.kpi.total_orders)"/>
+                </div>
+            </div>
+            <div class="sales-kpi-card" data-kpi="total_customers" t-att-data-value="props.kpi.total_customers">
+                <div class="sales-kpi-icon">👥</div>
+                <div class="sales-kpi-info">
+                    <h4>Total Customers</h4>
+                    <p t-esc="this.formatNumber(props.kpi.total_customers)"/>
+                </div>
+            </div>
+            <div class="sales-kpi-card" data-kpi="total_products" t-att-data-value="props.kpi.total_products">
+                <div class="sales-kpi-icon">🏷️</div>
+                <div class="sales-kpi-info">
+                    <h4>Total Products</h4>
+                    <p t-esc="this.formatNumber(props.kpi.total_products)"/>
+                </div>
+            </div>
+            <div class="sales-kpi-card" data-kpi="total_qty" t-att-data-value="props.kpi.total_qty">
+                <div class="sales-kpi-icon">📊</div>
+                <div class="sales-kpi-info">
+                    <h4>Total Quantity</h4>
+                    <p t-esc="this.formatNumber(props.kpi.total_qty)"/>
+                </div>
+            </div>
+            <div class="sales-kpi-card" data-kpi="avg_order_value" t-att-data-value="props.kpi.avg_order_value">
+                <div class="sales-kpi-icon">📈</div>
+                <div class="sales-kpi-info">
+                    <h4>Avg Order Value</h4>
+                    <p t-esc="this.formatCurrency(props.kpi.avg_order_value)"/>
+                </div>
+            </div>
+            <div class="sales-kpi-card" data-kpi="total_margin" t-att-data-value="props.kpi.total_margin">
+                <div class="sales-kpi-icon">💹</div>
+                <div class="sales-kpi-info">
+                    <h4>Total Margin</h4>
+                    <p t-esc="this.formatCurrency(props.kpi.total_margin)"/>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <!-- Table Template -->
+    <t t-name="sales_analytics_dashboard.table_template" owl="1">
+        <div class="sales-table-container">
+            <table class="sales-table">
+                <colgroup>
+                    <col style="width: 180px;"/> <!-- Reference -->
+                    <col style="width: 120px;"/> <!-- Date -->
+                    <col style="width: 180px;"/> <!-- Customer -->
+                    <col style="width: 200px;"/> <!-- Product -->
+                    <col style="width: 150px;"/> <!-- Salesperson -->
+                    <col style="width: 120px;"/> <!-- Team -->
+                    <col style="width: 80px;"/>  <!-- Qty -->
+                    <col style="width: 120px;"/> <!-- Unit Price -->
+                    <col style="width: 150px;"/> <!-- Subtotal -->
+                    <col style="width: 150px;"/> <!-- Margin -->
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>Reference</th>
+                        <th>Date</th>
+                        <th>Customer</th>
+                        <th>Product</th>
+                        <th>Salesperson</th>
+                        <th>Team</th>
+                        <th>Qty</th>
+                        <th>Unit Price</th>
+                        <th>Subtotal</th>
+                        <th>Margin</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <t t-if="props.groups.length > 0">
+                        <t t-call="sales_analytics_dashboard.TableGroupRows">
+                            <t t-set="nodes" t-value="props.analyticsData"/>
+                            <t t-set="level" t-value="0"/>
+                            <t t-set="path" t-value="''"/>
+                        </t>
+                    </t>
+                    <t t-else="">
+                        <t t-foreach="props.lines" t-as="line" t-key="line_index">
+                            <tr class="sales-row-detail">
+                                <td><div class="sales-cell-content"><a t-attf-href="/web#id={{line.order_id}}&amp;model=sale.order&amp;view_type=form" 
+                                           target="_blank" 
+                                           class="sales-ref-link"
+                                           t-esc="line.order_name"/></div></td>
+                                <td><div class="sales-cell-content" t-esc="line.date_order"/></td>
+                                <td><div class="sales-cell-content" t-esc="line.customer"/></td>
+                                <td><div class="sales-cell-content" t-esc="line.product"/></td>
+                                <td><div class="sales-cell-content" t-esc="line.salesperson"/></td>
+                                <td><div class="sales-cell-content" t-esc="line.team"/></td>
+                                <td><div class="sales-cell-content" t-esc="this.formatNumber(line.qty)"/></td>
+                                <td><div class="sales-cell-content" t-esc="this.formatCurrency(line.price_unit)"/></td>
+                                <td><div class="sales-cell-content" t-esc="this.formatCurrency(line.subtotal)"/></td>
+                                <td><div class="sales-cell-content" t-esc="this.formatCurrency(line.margin)"/></td>
+                            </tr>
+                        </t>
+                    </t>
+                </tbody>
+            </table>
+        </div>
+    </t>
+
+    <!-- Grouped Table Rows Template (Recursive) -->
+    <t t-name="sales_analytics_dashboard.TableGroupRows" owl="1">
+        <t t-foreach="Object.keys(nodes)" t-as="group_key" t-key="group_key">
+            <t t-set="node" t-value="nodes[group_key]"/>
+            <t t-set="current_path" t-value="path ? (path + '/' + group_key) : group_key"/>
+            
+            <tr class="sales-row-group" 
+                t-att-class="'level-' + level"
+                t-on-click="() => this._toggleGroup(current_path)">
+                <td>
+                    <div t-att-style="'padding-left: ' + (level * 20 + 10) + 'px'" class="sales-cell-content">
+                        <span class="sales-group-icon" t-esc="state.expandedGroups[current_path] ? '▼' : '▶'"/>
+                        <strong t-esc="group_key"/>
+                    </div>
+                </td>
+                <td><div class="sales-cell-content"></div></td>
+                <td><div class="sales-cell-content"></div></td>
+                <td><div class="sales-cell-content"></div></td>
+                <td><div class="sales-cell-content"></div></td>
+                <td><div class="sales-cell-content"></div></td>
+                <td><div class="sales-cell-content" t-esc="this.formatNumber(node.qty)"/></td>
+                <td><div class="sales-cell-content">-</div></td>
+                <td><div class="sales-cell-content" t-esc="this.formatCurrency(node.total)"/></td>
+                <td><div class="sales-cell-content" t-esc="this.formatCurrency(node.margin)"/></td>
+            </tr>
+            
+            <t t-if="state.expandedGroups[current_path]">
+                <!-- Sub-groups -->
+                <t t-if="node.children &amp;&amp; Object.keys(node.children).length > 0">
+                    <t t-call="sales_analytics_dashboard.TableGroupRows">
+                        <t t-set="nodes" t-value="node.children"/>
+                        <t t-set="level" t-value="level + 1"/>
+                        <t t-set="path" t-value="current_path"/>
+                    </t>
+                </t>
+                
+                <!-- Leaf Lines -->
+                <t t-if="node.lines &amp;&amp; node.lines.length > 0">
+                    <t t-foreach="node.lines" t-as="line" t-key="line.order_id + '-' + line_index">
+                        <tr class="sales-row-detail level-detail">
+                            <td>
+                                <div t-att-style="'padding-left: ' + ((level + 1) * 20 + 10) + 'px'" class="sales-cell-content">
+                                    <a t-attf-href="/web#id={{line.order_id}}&amp;model=sale.order&amp;view_type=form" 
+                                       target="_blank" 
+                                       class="sales-ref-link"
+                                       t-esc="line.order_name"/>
+                                </div>
+                            </td>
+                            <td><div class="sales-cell-content" t-esc="line.date_order"/></td>
+                            <td><div class="sales-cell-content" t-esc="line.customer"/></td>
+                            <td><div class="sales-cell-content" t-esc="line.product"/></td>
+                            <td><div class="sales-cell-content" t-esc="line.salesperson"/></td>
+                            <td><div class="sales-cell-content" t-esc="line.team"/></td>
+                            <td><div class="sales-cell-content" t-esc="this.formatNumber(line.qty)"/></td>
+                            <td><div class="sales-cell-content" t-esc="this.formatCurrency(line.price_unit)"/></td>
+                            <td><div class="sales-cell-content" t-esc="this.formatCurrency(line.subtotal)"/></td>
+                            <td><div class="sales-cell-content" t-esc="this.formatCurrency(line.margin)"/></td>
+                        </tr>
+                    </t>
+                </t>
+            </t>
+        </t>
+    </t>
+
+</templates>

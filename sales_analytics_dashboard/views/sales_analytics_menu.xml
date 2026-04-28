@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Menu Action -->
+    <record id="action_sales_analytics_dashboard" model="ir.actions.client">
+        <field name="name">Sales Analytics Dashboard</field>
+        <field name="tag">sales_analytics_dashboard.action</field>
+        <field name="context">{}</field>
+    </record>
+
+    <!-- Menu Items -->
+    <menuitem id="menu_sales_analytics_root"
+              name="Sales Analytics"
+              sequence="10"
+              web_icon="sales_analytics_dashboard,static/description/icon.png"/>
+
+    <menuitem id="menu_sales_analytics_dashboard"
+              name="Dashboard"
+              parent="menu_sales_analytics_root"
+              action="action_sales_analytics_dashboard"
+              sequence="10"/>
+
+    <menuitem id="menu_sales_analytics_reports"
+              name="Reports"
+              parent="menu_sales_analytics_root"
+              sequence="20"/>
+
+    <menuitem id="menu_sales_analytics_settings"
+              name="Settings"
+              parent="menu_sales_analytics_root"
+              sequence="100"/>
+
+    <!-- Also add to existing Sales menu -->
+    <menuitem id="menu_sales_analytics_in_sales"
+              name="Analytics Dashboard"
+              parent="sale.sale_menu_root"
+              action="action_sales_analytics_dashboard"
+              sequence="50"/>
+
+</odoo>

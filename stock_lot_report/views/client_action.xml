@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_stock_lot_report" model="ir.actions.client">
+        <field name="name">Stock Lot Report</field>
+        <field name="tag">stock_lot_report.client_action</field>
+        <field name="context">{}</field>
+    </record>
+
+    <menuitem id="menu_stock_lot_report"
+              name="Stock Lot Report"
+              parent="stock.menu_warehouse_report"
+              action="action_stock_lot_report"
+              sequence="20"/>
+</odoo>

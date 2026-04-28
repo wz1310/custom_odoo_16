@@ -1,0 +1,372 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+<template id="report_modern_html">
+<div class="srm-root">
+<style>
+/* ===== RESET &amp; BASE ===== */
+.srm-root { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f0f4ff; min-height: 100%; }
+
+/* ===== TOPBAR ===== */
+.srm-topbar {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #3730a3 100%);
+    padding: 14px 24px; display: flex; align-items: center; gap: 16px;
+    box-shadow: 0 4px 20px rgba(99,102,241,0.4); position: sticky; top: 0; z-index: 200;
+    flex-wrap: wrap;
+}
+.srm-topbar-title { flex: 0 0 auto; }
+.srm-topbar-title h3 { margin: 0; color: white; font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
+.srm-topbar-title p { margin: 0; color: rgba(255,255,255,0.65); font-size: 11px; }
+
+.srm-filters { display: flex; align-items: center; gap: 8px; flex: 1; justify-content: center; flex-wrap: wrap; }
+.srm-filter-group { display: flex; flex-direction: column; }
+.srm-filter-group label { font-size: 9px; color: rgba(255,255,255,0.6); font-weight: 600; text-transform: uppercase; margin-bottom: 2px; }
+.srm-filter-group input[type=date] {
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
+    color: white; border-radius: 6px; padding: 5px 10px; font-size: 12px; width: 140px;
+    backdrop-filter: blur(4px);
+}
+.srm-filter-group input[type=date]::-webkit-calendar-picker-indicator { filter: invert(1); opacity: 0.7; }
+
+.srm-btn {
+    border: none; border-radius: 8px; padding: 7px 14px; font-size: 12px; font-weight: 600;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;
+}
+.srm-btn-apply { background: white; color: #4f46e5; }
+.srm-btn-apply:hover { background: #e0e7ff; }
+.srm-btn-excel { background: #10b981; color: white; }
+.srm-btn-excel:hover { background: #059669; }
+
+/* ===== GROUPBY BAR ===== */
+.srm-groupby-bar {
+    background: white; border-bottom: 1px solid #e2e8f0;
+    padding: 8px 24px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.srm-groupby-label { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+.srm-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: #e0e7ff; color: #4338ca; border-radius: 20px;
+    padding: 3px 10px; font-size: 11px; font-weight: 600;
+}
+.srm-badge .srm-remove { cursor: pointer; opacity: 0.6; font-size: 10px; }
+.srm-badge .srm-remove:hover { opacity: 1; }
+.srm-add-group-btn {
+    background: #f1f5f9; border: 1px dashed #cbd5e1; color: #64748b;
+    border-radius: 20px; padding: 3px 12px; font-size: 11px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s;
+}
+.srm-add-group-btn:hover { background: #e0e7ff; border-color: #6366f1; color: #4f46e5; }
+.srm-dropdown { position: relative; display: inline-block; }
+.srm-dropdown-menu {
+    display: none; position: absolute; top: 110%; left: 0; background: white;
+    border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    min-width: 150px; z-index: 300; overflow: hidden;
+}
+.srm-dropdown-menu.open { display: block; }
+.srm-dropdown-item {
+    padding: 9px 16px; font-size: 12px; color: #374151; cursor: pointer;
+    display: flex; align-items: center; gap: 8px; transition: background 0.15s;
+}
+.srm-dropdown-item:hover { background: #f0f4ff; color: #4f46e5; }
+
+/* ===== KPI CARDS ===== */
+.srm-kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 20px 24px 0; }
+.srm-kpi-card {
+    background: white; border-radius: 14px; padding: 18px 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06); border: 1px solid #f1f5f9;
+    display: flex; align-items: center; gap: 14px; transition: transform 0.2s, box-shadow 0.2s;
+}
+.srm-kpi-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+.srm-kpi-icon {
+    width: 46px; height: 46px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
+}
+.srm-kpi-icon.purple { background: #ede9fe; color: #7c3aed; }
+.srm-kpi-icon.green  { background: #d1fae5; color: #059669; }
+.srm-kpi-icon.blue   { background: #dbeafe; color: #2563eb; }
+.srm-kpi-icon.orange { background: #ffedd5; color: #ea580c; }
+.srm-kpi-info p { margin: 0; font-size: 11px; color: #94a3b8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.4px; }
+.srm-kpi-info h4 { margin: 2px 0 0; font-size: 20px; font-weight: 700; color: #1e293b; }
+
+/* ===== CHART + TABLE LAYOUT ===== */
+.srm-body { padding: 16px 24px 24px; display: flex; flex-direction: column; gap: 16px; }
+.srm-chart-section {
+    background: white; border-radius: 14px; padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06); border: 1px solid #f1f5f9;
+}
+.srm-section-title { font-size: 13px; font-weight: 700; color: #1e293b; margin: 0 0 16px; }
+
+/* Bar chart (pure CSS) */
+.srm-chart { display: flex; align-items: flex-end; gap: 12px; height: 120px; }
+.srm-bar-wrap { display: flex; flex-direction: column; align-items: center; flex: 1; height: 100%; justify-content: flex-end; }
+.srm-bar {
+    width: 100%; border-radius: 6px 6px 0 0;
+    background: linear-gradient(180deg, #818cf8, #6366f1);
+    transition: height 0.6s cubic-bezier(0.34,1.56,0.64,1);
+    min-height: 4px; position: relative;
+}
+.srm-bar:hover { background: linear-gradient(180deg, #a5b4fc, #818cf8); }
+.srm-bar-label { font-size: 9px; color: #64748b; margin-top: 4px; text-align: center; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.srm-bar-val { font-size: 9px; font-weight: 700; color: #4f46e5; margin-bottom: 2px; }
+
+/* ===== TABLE ===== */
+.srm-table-section {
+    background: white; border-radius: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06); border: 1px solid #f1f5f9;
+    overflow: hidden;
+}
+.srm-table-header { padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f1f5f9; }
+.srm-table-scroll { overflow-x: auto; max-height: calc(100vh - 420px); overflow-y: auto; }
+.srm-table { width: 100%; border-collapse: collapse; }
+.srm-table thead th {
+    position: sticky; top: 0; background: #f8fafc; padding: 11px 14px;
+    font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase;
+    letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; white-space: nowrap;
+}
+.srm-table tbody tr { transition: background 0.15s; }
+.srm-table tbody tr:hover { background: #f8faff; }
+
+/* Group rows */
+.srm-row-group { cursor: pointer; }
+.srm-row-group td {
+    padding: 10px 14px; font-weight: 700; font-size: 12px; color: #1e293b;
+    border-bottom: 1px solid #e2e8f0;
+}
+.srm-row-group.level-0 td { background: #f0f4ff; color: #3730a3; }
+.srm-row-group.level-1 td { background: #fafafa; color: #374151; padding-left: 36px !important; }
+.srm-row-group.level-2 td { background: #fefefe; color: #4b5563; padding-left: 56px !important; }
+
+/* Detail rows */
+.srm-row-detail { display: none; }
+.srm-row-detail td { padding: 8px 14px; font-size: 12px; color: #475569; border-bottom: 1px solid #f8fafc; }
+.srm-row-detail.visible { display: table-row; }
+
+.srm-arrow { display: inline-block; transition: transform 0.25s; margin-right: 8px; color: #94a3b8; font-size: 10px; }
+.srm-row-group.expanded .srm-arrow { transform: rotate(90deg); color: #6366f1; }
+
+.srm-ref-badge {
+    display: inline-block; background: #ede9fe; color: #5b21b6;
+    border-radius: 5px; padding: 2px 8px; font-size: 10px; font-weight: 700;
+    text-decoration: none; transition: background 0.15s;
+}
+.srm-ref-badge:hover { background: #ddd6fe; }
+
+.srm-amount { font-family: 'Monaco', 'Consolas', monospace; font-weight: 600; color: #059669; }
+.srm-amount-group { font-family: 'Monaco', 'Consolas', monospace; font-weight: 700; color: #4f46e5; }
+
+.srm-empty { text-align: center; padding: 48px; color: #94a3b8; font-size: 14px; }
+
+/* Loading */
+.srm-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 300px; gap: 12px; }
+.srm-spinner { width: 36px; height: 36px; border: 3px solid #e0e7ff; border-top-color: #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<!-- TOPBAR -->
+<div class="srm-topbar">
+    <div class="srm-topbar-title">
+        <h3>&#9889; Sales Report Modern</h3>
+        <p><t t-esc="periode_label"/></p>
+    </div>
+
+    <div class="srm-filters">
+        <div class="srm-filter-group">
+            <label>From</label>
+            <input type="date" name="date_from" t-att-value="date_from"/>
+        </div>
+        <div class="srm-filter-group">
+            <label>To</label>
+            <input type="date" name="date_to" t-att-value="date_to"/>
+        </div>
+        <button class="srm-btn srm-btn-apply js_apply_filter" style="margin-top:14px;">
+            &#128269; Filter
+        </button>
+    </div>
+
+    <button class="srm-btn srm-btn-excel js_export_excel" style="margin-left: auto;">
+        &#128196; Export Excel
+    </button>
+</div>
+
+<!-- GROUPBY BAR -->
+<div class="srm-groupby-bar">
+    <span class="srm-groupby-label">Group by:</span>
+    <t t-foreach="active_groups" t-as="gb">
+        <span class="srm-badge">
+            <t t-if="gb == 'customer'">&#128100; Customer</t>
+            <t t-if="gb == 'order'">&#128203; Order</t>
+            <t t-if="gb == 'product'">&#128230; Product</t>
+            <t t-if="gb == 'salesperson'">&#128084; Salesperson</t>
+            <span class="srm-remove js_remove_groupby" t-att-data-groupby="gb">&#10005;</span>
+        </span>
+    </t>
+    <div class="srm-dropdown">
+        <button class="srm-add-group-btn js_toggle_dropdown">&#43; Add Group</button>
+        <div class="srm-dropdown-menu" id="srm_group_dropdown">
+            <div class="srm-dropdown-item js_add_groupby" data-groupby="customer">&#128100; Customer</div>
+            <div class="srm-dropdown-item js_add_groupby" data-groupby="order">&#128203; Order</div>
+            <div class="srm-dropdown-item js_add_groupby" data-groupby="product">&#128230; Product</div>
+            <div class="srm-dropdown-item js_add_groupby" data-groupby="salesperson">&#128084; Salesperson</div>
+        </div>
+    </div>
+</div>
+
+<!-- KPI CARDS -->
+<div class="srm-kpi-row">
+    <div class="srm-kpi-card">
+        <div class="srm-kpi-icon purple">&#128176;</div>
+        <div class="srm-kpi-info">
+            <p>Total Revenue</p>
+            <h4><t t-esc="'{:,.0f}'.format(kpi['total_revenue'])"/></h4>
+        </div>
+    </div>
+    <div class="srm-kpi-card">
+        <div class="srm-kpi-icon green">&#128203;</div>
+        <div class="srm-kpi-info">
+            <p>Total Orders</p>
+            <h4><t t-esc="kpi['total_orders']"/></h4>
+        </div>
+    </div>
+    <div class="srm-kpi-card">
+        <div class="srm-kpi-icon blue">&#128100;</div>
+        <div class="srm-kpi-info">
+            <p>Customers</p>
+            <h4><t t-esc="kpi['total_customers']"/></h4>
+        </div>
+    </div>
+    <div class="srm-kpi-card">
+        <div class="srm-kpi-icon orange">&#128230;</div>
+        <div class="srm-kpi-info">
+            <p>Total Qty</p>
+            <h4><t t-esc="'{:,.0f}'.format(kpi['total_qty'])"/></h4>
+        </div>
+    </div>
+</div>
+
+<!-- BODY -->
+<div class="srm-body">
+
+    <!-- TOP CUSTOMERS CHART -->
+    <t t-if="top_customers">
+    <div class="srm-chart-section">
+        <p class="srm-section-title">&#127942; Top 5 Customers by Revenue</p>
+        <t t-set="max_val" t-value="top_customers[0][1] if top_customers else 1"/>
+        <div class="srm-chart">
+            <t t-foreach="top_customers" t-as="tc">
+                <t t-set="bar_pct" t-value="int((tc[1] / max_val) * 100) if max_val else 0"/>
+                <div class="srm-bar-wrap">
+                    <span class="srm-bar-val"><t t-esc="'{:,.0f}'.format(tc[1])"/></span>
+                    <div class="srm-bar" t-attf-style="height: {{bar_pct}}%;"></div>
+                    <span class="srm-bar-label" t-att-title="tc[0]"><t t-esc="tc[0]"/></span>
+                </div>
+            </t>
+        </div>
+    </div>
+    </t>
+
+    <!-- DATA TABLE -->
+    <div class="srm-table-section">
+        <div class="srm-table-header">
+            <p class="srm-section-title" style="margin:0;">&#128202; Sales Detail</p>
+            <span style="font-size:11px; color:#94a3b8;">
+                <t t-esc="len(all_lines)"/> lines
+            </span>
+        </div>
+        <div class="srm-table-scroll">
+            <table class="srm-table">
+                <thead>
+                    <tr>
+                        <th>Reference</th>
+                        <th>Date</th>
+                        <th>Customer</th>
+                        <th>Product</th>
+                        <th>Salesperson</th>
+                        <th style="text-align:right;">Qty</th>
+                        <th style="text-align:right;">Unit Price</th>
+                        <th style="text-align:right;">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <t t-if="active_groups">
+                        <t t-call="sale_report_modern.dynamic_group_rows">
+                            <t t-set="nodes" t-value="report_data"/>
+                            <t t-set="parent_id" t-value="'root'"/>
+                            <t t-set="level" t-value="0"/>
+                        </t>
+                    </t>
+                    <t t-else="">
+                        <t t-foreach="all_lines" t-as="line">
+                            <tr class="srm-row-detail visible">
+                                <td>
+                                    <a class="srm-ref-badge"
+                                       t-attf-href="{{base_url}}/web#id={{line['order_id']}}&amp;model=sale.order&amp;view_type=form"
+                                       target="_blank">
+                                        <t t-esc="line['ref']"/>
+                                    </a>
+                                </td>
+                                <td><t t-esc="line['date_order']"/></td>
+                                <td><t t-esc="line['customer']"/></td>
+                                <td><t t-esc="line['product']"/></td>
+                                <td><t t-esc="line['salesperson']"/></td>
+                                <td style="text-align:right;"><t t-esc="int(line['qty'])"/></td>
+                                <td style="text-align:right;" class="srm-amount"><t t-esc="'{:,.2f}'.format(line['price_unit'])"/></td>
+                                <td style="text-align:right;" class="srm-amount"><t t-esc="'{:,.2f}'.format(line['subtotal'])"/></td>
+                            </tr>
+                        </t>
+                    </t>
+                    <t t-if="not all_lines">
+                        <tr><td colspan="8" class="srm-empty">&#128269; Tidak ada data untuk periode ini.</td></tr>
+                    </t>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</div>
+</template>
+
+<template id="dynamic_group_rows">
+    <t t-foreach="nodes" t-as="key">
+        <t t-set="current_id" t-value="parent_id + '_' + str(key_index)"/>
+        <tr t-attf-class="srm-row-group level-{{level}} srm-clickable child-of-{{parent_id}}"
+            t-att-data-id="current_id"
+            t-att-style="'display: none;' if level > 0 else ''">
+            <td colspan="7" t-attf-style="padding-left: {{14 + level * 22}}px !important;">
+                <span class="srm-arrow">&#9658;</span>
+                <t t-esc="key"/>
+            </td>
+            <td style="text-align:right;" class="srm-amount-group">
+                <t t-esc="'{:,.2f}'.format(nodes[key]['total'])"/>
+            </td>
+        </tr>
+
+        <t t-if="nodes[key].get('children')">
+            <t t-call="sale_report_modern.dynamic_group_rows">
+                <t t-set="nodes" t-value="nodes[key]['children']"/>
+                <t t-set="parent_id" t-value="current_id"/>
+                <t t-set="level" t-value="level + 1"/>
+            </t>
+        </t>
+
+        <t t-if="nodes[key].get('lines')">
+            <t t-foreach="nodes[key]['lines']" t-as="line">
+                <tr t-attf-class="srm-row-detail child-of-{{current_id}}">
+                    <td t-attf-style="padding-left: {{14 + (level + 1) * 22}}px !important;">
+                        <a class="srm-ref-badge"
+                           t-attf-href="{{base_url}}/web#id={{line['order_id']}}&amp;model=sale.order&amp;view_type=form"
+                           target="_blank">
+                            <t t-esc="line['ref']"/>
+                        </a>
+                    </td>
+                    <td><t t-esc="line['date_order']"/></td>
+                    <td><t t-esc="line['customer']"/></td>
+                    <td><t t-esc="line['product']"/></td>
+                    <td><t t-esc="line['salesperson']"/></td>
+                    <td style="text-align:right;"><t t-esc="int(line['qty'])"/></td>
+                    <td style="text-align:right;" class="srm-amount"><t t-esc="'{:,.2f}'.format(line['price_unit'])"/></td>
+                    <td style="text-align:right;" class="srm-amount"><t t-esc="'{:,.2f}'.format(line['subtotal'])"/></td>
+                </tr>
+            </t>
+        </t>
+    </t>
+</template>
+</odoo>

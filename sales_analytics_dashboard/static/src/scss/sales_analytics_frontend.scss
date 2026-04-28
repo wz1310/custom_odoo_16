@@ -1,0 +1,156 @@
+/**
+ * Sales Analytics Frontend Styles
+ * For portal and website integration
+ */
+
+.sales-portal-dashboard {
+    padding: 2rem;
+    background: #f8fafc;
+    min-height: 100vh;
+
+    .portal-header {
+        text-align: center;
+        margin-bottom: 3rem;
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+
+        p {
+            font-size: 1.125rem;
+            color: #64748b;
+        }
+    }
+
+    .portal-kpi-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 3rem;
+    }
+
+    .portal-kpi-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        transition: transform 0.3s, box-shadow 0.3s;
+
+        &:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+        }
+
+        .icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 1rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+
+            &.revenue { background: #ede9fe; color: #7c3aed; }
+            &.orders { background: #d1fae5; color: #059669; }
+            &.customers { background: #dbeafe; color: #2563eb; }
+            &.products { background: #ffedd5; color: #ea580c; }
+        }
+
+        .value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.25rem;
+        }
+
+        .label {
+            font-size: 0.875rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+    }
+
+    .portal-chart-section {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 1.5rem;
+        }
+    }
+
+    .portal-table-section {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 1.5rem;
+        }
+
+        .portal-table {
+            width: 100%;
+            border-collapse: collapse;
+
+            th {
+                padding: 1rem;
+                text-align: left;
+                font-size: 0.75rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                color: #64748b;
+                background: #f8fafc;
+                border-bottom: 2px solid #e2e8f0;
+            }
+
+            td {
+                padding: 1rem;
+                font-size: 0.875rem;
+                color: #1e293b;
+                border-bottom: 1px solid #f1f5f9;
+            }
+
+            tr:hover {
+                background: #f8faff;
+            }
+        }
+    }
+}
+
+// Mobile responsive
+@media (max-width: 768px) {
+    .sales-portal-dashboard {
+        padding: 1rem;
+
+        .portal-header h1 {
+            font-size: 1.75rem;
+        }
+
+        .portal-kpi-row {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .portal-chart-section,
+        .portal-table-section {
+            padding: 1.5rem;
+        }
+    }
+}

@@ -1,0 +1,617 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_sales_html_screen">
+        <div class="o_sales_report_example d-flex flex-column h-100">
+            <style>
+                .o_sales_report_example { font-family: Arial, sans-serif; background: #f8fafc; height: 100%; color: #0f172a; }
+                .o_sales_report_example .page-shell { padding: 10px; display: flex; flex-direction: column; gap: 8px; height: 100%; }
+                .o_sales_report_example .report-header {
+                    background: #ffffff;
+                    color: #0f172a;
+                    padding: 10px 12px;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 6px;
+                    position: relative;
+                }
+                .o_sales_report_example .mobile-menu-toggle {
+                    display: none;
+                    width: 32px;
+                    height: 32px;
+                    align-items: center;
+                    justify-content: center;
+                    border: 1px solid #dbe4f0;
+                    border-radius: 6px;
+                    background: #ffffff;
+                    color: #334155;
+                    padding: 0;
+                    font-size: 14px;
+                }
+                .o_sales_report_example .header-top { display: flex; gap: 12px; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+                .o_sales_report_example .header-title-wrap { display: flex; align-items: center; gap: 10px; min-width: 0; }
+                .o_sales_report_example .headline { margin: 0; font-size: 15px; font-weight: 600; line-height: 1.2; }
+                .o_sales_report_example .subline { color: #64748b; font-size: 11px; margin-top: 2px; }
+                .o_sales_report_example .header-actions { display: flex; gap: 8px; align-items: end; flex-wrap: wrap; justify-content: flex-end; }
+                .o_sales_report_example .header-panel { display: contents; }
+                .o_sales_report_example .header-search-wrap { min-width: 180px; }
+                .o_sales_report_example .header-search-input {
+                    min-width: 180px;
+                    min-height: 28px;
+                    border-radius: 6px;
+                    border: 1px solid #dbe4f0;
+                    background: #ffffff;
+                    color: #0f172a;
+                    box-shadow: none;
+                    font-size: 10px;
+                    padding: 4px 8px;
+                }
+                .o_sales_report_example .header-filter-group { display: flex; gap: 8px; align-items: end; flex-wrap: wrap; }
+                .o_sales_report_example .header-group-card {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: stretch;
+                    gap: 6px;
+                    min-width: 170px;
+                    padding: 8px;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 6px;
+                    background: #f8fafc;
+                }
+                .o_sales_report_example .header-group-tools {
+                    display: flex;
+                    gap: 8px;
+                    align-items: center;
+                    justify-content: flex-end;
+                    flex-wrap: wrap;
+                }
+                .o_sales_report_example .header-group-badges {
+                    display: flex;
+                    gap: 6px;
+                    flex-wrap: wrap;
+                    justify-content: flex-end;
+                }
+                .o_sales_report_example .header-group-picker {
+                    display: flex;
+                    justify-content: flex-end;
+                }
+                .o_sales_report_example .mobile-menu-close {
+                    display: none;
+                    width: 32px;
+                    height: 32px;
+                    align-items: center;
+                    justify-content: center;
+                    border: 1px solid #dbe4f0;
+                    border-radius: 6px;
+                    background: #ffffff;
+                    color: #334155;
+                    padding: 0;
+                    font-size: 13px;
+                    margin-left: auto;
+                }
+                .o_sales_report_example .mobile-menu-overlay {
+                    display: none;
+                    position: fixed;
+                    inset: 0;
+                    background: rgba(15, 23, 42, 0.22);
+                    z-index: 39;
+                }
+                .o_sales_report_example .header-field { min-width: 104px; }
+                .o_sales_report_example .header-field-label {
+                    font-size: 9px;
+                    font-weight: 600;
+                    color: #64748b;
+                    margin-bottom: 2px;
+                }
+                .o_sales_report_example .header-date-field {
+                    min-width: 104px;
+                    min-height: 28px;
+                    border-radius: 6px;
+                    border: 1px solid #dbe4f0;
+                    background: #ffffff;
+                    color: #0f172a;
+                    box-shadow: none;
+                    font-size: 10px;
+                    padding: 4px 8px;
+                }
+                .o_sales_report_example .header-date-field::-webkit-calendar-picker-indicator { filter: none; opacity: 0.65; }
+                .o_sales_report_example .header-group-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    background: #f1f5f9;
+                    color: #334155;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 999px;
+                    padding: 3px 7px;
+                    font-size: 9px;
+                    font-weight: 600;
+                }
+                .o_sales_report_example .header-group-badge i { cursor: pointer; opacity: 0.65; }
+                .o_sales_report_example .header-group-btn {
+                    border-radius: 6px;
+                    border: 1px solid #dbe4f0;
+                    background: #ffffff;
+                    color: #334155;
+                    font-size: 10px;
+                    font-weight: 600;
+                    min-height: 28px;
+                    padding: 0 8px;
+                }
+                .o_sales_report_example .header-group-btn:hover,
+                .o_sales_report_example .header-group-btn:focus,
+                .o_sales_report_example .header-group-btn:active {
+                    background: #f8fafc;
+                    color: #0f172a;
+                }
+                .o_sales_report_example .export-btn {
+                    background: #0f172a;
+                    border: 1px solid #0f172a;
+                    color: #fff;
+                    border-radius: 6px;
+                    padding: 5px 9px;
+                    font-size: 10px;
+                    font-weight: 600;
+                }
+                .o_sales_report_example .export-btn:hover { background: #1e293b; color: #fff; }
+                .o_sales_report_example .view-switch {
+                    display: inline-flex;
+                    align-items: center;
+                    border: 1px solid #dbe4f0;
+                    border-radius: 6px;
+                    overflow: hidden;
+                    background: #ffffff;
+                }
+                .o_sales_report_example .view-btn {
+                    min-height: 28px;
+                    padding: 0 10px;
+                    border: 0;
+                    background: transparent;
+                    color: #64748b;
+                    font-size: 10px;
+                    font-weight: 600;
+                }
+                .o_sales_report_example .view-btn.is-active {
+                    background: #0f172a;
+                    color: #ffffff;
+                }
+                .o_sales_report_example .summary-strip {
+                    display: flex;
+                    gap: 8px;
+                    flex-wrap: wrap;
+                    margin-top: 8px;
+                }
+                .o_sales_report_example .summary-chip {
+                    display: inline-flex;
+                    align-items: baseline;
+                    gap: 8px;
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 999px;
+                    padding: 4px 8px;
+                }
+                .o_sales_report_example .summary-label { font-size: 10px; text-transform: uppercase; color: #64748b; }
+                .o_sales_report_example .summary-value { font-size: 12px; font-weight: 600; color: #0f172a; }
+                .o_sales_report_example .table-wrap {
+                    flex: 1;
+                    min-height: 0;
+                    overflow: auto;
+                    background: #fff;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 6px;
+                }
+                .o_sales_report_example table { width: 100%; border-collapse: separate; border-spacing: 0; }
+                .o_sales_report_example th {
+                    background: #ffffff;
+                    padding: 10px 12px;
+                    font-size: 10px;
+                    text-align: left;
+                    position: sticky;
+                    top: 0;
+                    z-index: 2;
+                    text-transform: uppercase;
+                    color: #64748b;
+                    border-bottom: 1px solid #e2e8f0;
+                }
+                .o_sales_report_example td { padding: 9px 12px; border-bottom: 1px solid #f1f5f9; font-size: 12px; vertical-align: middle; }
+                .o_sales_report_example .group-row { background: #fafcff; font-weight: 600; cursor: pointer; }
+                .o_sales_report_example .group-row:hover { background: #f8fafc; }
+                .o_sales_report_example .detail-row { display: none; }
+                .o_sales_report_example .is-expanded .arrow { transform: rotate(90deg); }
+                .o_sales_report_example .detail-row:nth-child(even) { background: #fcfcfd; }
+                .o_sales_report_example .detail-row:hover { background: #f8fafc; }
+                .o_sales_report_example .clickable-row { cursor: pointer; }
+                .o_sales_report_example .ref-pill {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 3px 0;
+                    border-radius: 999px;
+                    background: transparent;
+                    color: #0f172a;
+                    font-weight: 600;
+                    font-size: 11px;
+                }
+                .o_sales_report_example .arrow {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 16px;
+                    height: 16px;
+                    transition: transform 0.2s ease;
+                    color: #64748b;
+                }
+                .o_sales_report_example .amount { text-align: right; white-space: nowrap; }
+                .o_sales_report_example .empty-state { text-align: center; padding: 44px 20px; color: #64748b; }
+                .o_sales_report_example .chart-view {
+                    display: none;
+                    flex: 1;
+                    min-height: 0;
+                    background: #ffffff;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 6px;
+                    padding: 12px;
+                    gap: 12px;
+                    flex-direction: column;
+                }
+                .o_sales_report_example.view-mode-graph .chart-view { display: flex; }
+                .o_sales_report_example.view-mode-graph .table-wrap { display: none; }
+                .o_sales_report_example .chart-header {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 12px;
+                    flex-wrap: wrap;
+                }
+                .o_sales_report_example .chart-title {
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: #0f172a;
+                }
+                .o_sales_report_example .chart-subtitle {
+                    font-size: 11px;
+                    color: #64748b;
+                    margin-top: 2px;
+                }
+                .o_sales_report_example .chart-range-switch {
+                    display: inline-flex;
+                    border: 1px solid #dbe4f0;
+                    border-radius: 6px;
+                    overflow: hidden;
+                    background: #ffffff;
+                }
+                .o_sales_report_example .chart-range-btn {
+                    min-height: 32px;
+                    padding: 0 12px;
+                    border: 0;
+                    background: transparent;
+                    color: #64748b;
+                    font-size: 11px;
+                    font-weight: 600;
+                }
+                .o_sales_report_example .chart-range-btn.is-active {
+                    background: #f1f5f9;
+                    color: #0f172a;
+                }
+                .o_sales_report_example .chart-kpis {
+                    display: grid;
+                    grid-template-columns: repeat(4, minmax(140px, 1fr));
+                    gap: 8px;
+                }
+                .o_sales_report_example .chart-kpi {
+                    border: 1px solid #e2e8f0;
+                    border-radius: 6px;
+                    padding: 10px 12px;
+                    background: #fcfcfd;
+                }
+                .o_sales_report_example .chart-kpi-label {
+                    font-size: 10px;
+                    text-transform: uppercase;
+                    color: #64748b;
+                }
+                .o_sales_report_example .chart-kpi-value {
+                    margin-top: 6px;
+                    font-size: 16px;
+                    font-weight: 600;
+                    color: #0f172a;
+                }
+                .o_sales_report_example .chart-stage {
+                    flex: 1;
+                    min-height: 320px;
+                    border: 1px solid #f1f5f9;
+                    border-radius: 6px;
+                    padding: 10px;
+                    background: #ffffff;
+                    position: relative;
+                }
+                .o_sales_report_example .chart-canvas-wrap {
+                    position: relative;
+                    height: 100%;
+                    min-height: 300px;
+                }
+                .o_sales_report_example .chart-empty {
+                    position: absolute;
+                    inset: 0;
+                    display: none;
+                    align-items: center;
+                    justify-content: center;
+                    color: #64748b;
+                    font-size: 12px;
+                    background: rgba(255, 255, 255, 0.94);
+                }
+                .o_sales_report_example .chart-empty.is-visible { display: flex; }
+                @media (max-width: 767.98px) {
+                    .o_sales_report_example .page-shell { padding: 8px; gap: 8px; }
+                    .o_sales_report_example .report-header { padding: 8px 10px; }
+                    .o_sales_report_example .header-top { flex-wrap: nowrap; align-items: center; }
+                    .o_sales_report_example .header-title-wrap { flex: 1; min-width: 0; }
+                    .o_sales_report_example .mobile-menu-toggle { display: inline-flex; flex: 0 0 auto; }
+                    .o_sales_report_example .headline { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                    .o_sales_report_example .subline { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                    .o_sales_report_example .header-panel {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 12px;
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        bottom: 0;
+                        width: min(320px, 88vw);
+                        padding: 12px;
+                        background: #ffffff;
+                        border-right: 1px solid #e2e8f0;
+                        box-shadow: 12px 0 24px rgba(15, 23, 42, 0.12);
+                        z-index: 40;
+                        transform: translateX(-100%);
+                        transition: transform 0.2s ease;
+                        overflow-y: auto;
+                    }
+                    .o_sales_report_example.mobile-menu-open .header-panel { transform: translateX(0); }
+                    .o_sales_report_example.mobile-menu-open .mobile-menu-overlay { display: block; }
+                    .o_sales_report_example .mobile-menu-close { display: inline-flex; }
+                    .o_sales_report_example .header-actions { flex-direction: column; align-items: stretch; justify-content: flex-start; }
+                    .o_sales_report_example .header-filter-group,
+                    .o_sales_report_example .header-group-tools,
+                    .o_sales_report_example .summary-strip { flex-direction: column; align-items: stretch; }
+                    .o_sales_report_example .header-search-wrap,
+                    .o_sales_report_example .header-search-input { min-width: 100%; width: 100%; }
+                    .o_sales_report_example .header-field,
+                    .o_sales_report_example .header-date-field { min-width: 100%; width: 100%; }
+                    .o_sales_report_example .header-group-btn,
+                    .o_sales_report_example .export-btn { width: 100%; justify-content: center; }
+                    .o_sales_report_example .view-switch { width: 100%; }
+                    .o_sales_report_example .view-btn { flex: 1 1 50%; }
+                    .o_sales_report_example .summary-chip { justify-content: space-between; border-radius: 6px; }
+                    .o_sales_report_example .chart-kpis { grid-template-columns: 1fr; }
+                    .o_sales_report_example .chart-header { align-items: stretch; }
+                    .o_sales_report_example .chart-range-switch { width: 100%; }
+                    .o_sales_report_example .chart-range-btn { flex: 1 1 33%; }
+                    .o_sales_report_example .chart-stage { min-height: 280px; }
+                }
+            </style>
+
+            <div class="page-shell">
+                <div class="report-header">
+                    <div class="header-top">
+                        <div class="header-title-wrap">
+                            <button class="mobile-menu-toggle js_mobile_menu_toggle" type="button" aria-label="Open menu">
+                                <i class="fa fa-bars"/>
+                            </button>
+                            <div>
+                                <h3 class="headline">Sales Report Dashboard</h3>
+                                <div class="subline">Periode: <t t-esc="periode_label"/></div>
+                            </div>
+                        </div>
+                        <div class="header-panel">
+                            <button class="mobile-menu-close js_mobile_menu_close" type="button" aria-label="Close menu">
+                                <i class="fa fa-times"/>
+                            </button>
+                            <div class="header-actions">
+                                <div class="header-search-wrap">
+                                    <div class="header-field-label">Search</div>
+                                    <input type="text" name="search_term" t-att-value="search_term" class="form-control form-control-sm header-search-input" placeholder="Search reference, customer, product..."/>
+                                </div>
+                                <div class="header-filter-group">
+                                    <div class="header-field">
+                                        <div class="header-field-label">From Date</div>
+                                        <input type="date" name="date_from" t-att-value="date_from" class="form-control form-control-sm header-date-field"/>
+                                    </div>
+                                    <div class="header-field">
+                                        <div class="header-field-label">To Date</div>
+                                        <input type="date" name="date_to" t-att-value="date_to" class="form-control form-control-sm header-date-field"/>
+                                    </div>
+                                </div>
+                                <div class="header-group-picker">
+                                    <div class="dropdown">
+                                        <button class="btn header-group-btn dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                            Group By
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                            <li><a class="dropdown-item js_toggle_groupby" href="#" data-groupby="customer">Customer</a></li>
+                                            <li><a class="dropdown-item js_toggle_groupby" href="#" data-groupby="salesperson">Salesperson</a></li>
+                                            <li><a class="dropdown-item js_toggle_groupby" href="#" data-groupby="order">Order</a></li>
+                                            <li><a class="dropdown-item js_toggle_groupby" href="#" data-groupby="product">Product</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="header-group-card">
+                                    <div class="header-group-badges">
+                                        <t t-foreach="active_groups" t-as="group">
+                                            <span class="header-group-badge">
+                                                <t t-esc="group.title()"/>
+                                                <i class="fa fa-times js_toggle_groupby" t-att-data-groupby="group"/>
+                                            </span>
+                                        </t>
+                                    </div>
+                                </div>
+                                <div class="view-switch">
+                                    <button class="view-btn js_view_mode" type="button" data-view-mode="list">List</button>
+                                    <button class="view-btn js_view_mode" type="button" data-view-mode="graph">Graph</button>
+                                </div>
+                                <button class="btn export-btn js_export_excel">
+                                    <i class="fa fa-download" style="margin-right: 6px;"/> Export Excel
+                                </button>
+                            </div>
+                            <div class="summary-strip">
+                                <div class="summary-chip">
+                                    <div class="summary-label">Total Sales</div>
+                                    <div class="summary-value"><t t-esc="'{:,.2f}'.format(summary['total_sales'])"/></div>
+                                </div>
+                                <div class="summary-chip">
+                                    <div class="summary-label">Total Cost</div>
+                                    <div class="summary-value"><t t-esc="'{:,.2f}'.format(summary['total_cost'])"/></div>
+                                </div>
+                                <div class="summary-chip">
+                                    <div class="summary-label">Margin</div>
+                                    <div class="summary-value"><t t-esc="'{:,.2f}'.format(summary['total_margin'])"/></div>
+                                </div>
+                                <div class="summary-chip">
+                                    <div class="summary-label">Orders</div>
+                                    <div class="summary-value"><t t-esc="summary['total_orders']"/></div>
+                                </div>
+                                <div class="summary-chip">
+                                    <div class="summary-label">Detail Rows</div>
+                                    <div class="summary-value"><t t-esc="summary['total_lines']"/></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mobile-menu-overlay js_mobile_menu_close"/>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Reference / Group</th>
+                                <th>Date</th>
+                                <th>Customer</th>
+                                <th>Product</th>
+                                <th>Salesperson</th>
+                                <th class="amount">Qty</th>
+                                <th class="amount">Cost</th>
+                                <th class="amount">Unit Price</th>
+                                <th class="amount">Sales</th>
+                                <th class="amount">Margin</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-if="active_groups">
+                                <t t-call="sale_sales_report_example.dynamic_group_row">
+                                    <t t-set="nodes" t-value="report_data"/>
+                                    <t t-set="parent_id" t-value="'root'"/>
+                                    <t t-set="level" t-value="0"/>
+                                </t>
+                            </t>
+                            <t t-else="">
+                                <t t-foreach="all_lines" t-as="line">
+                                    <tr class="clickable-row js-open-order" t-att-data-order-id="line['order_id']" style="display: table-row;">
+                                        <td><span class="ref-pill"><t t-esc="line['ref']"/></span></td>
+                                        <td><t t-esc="line['date_order']"/></td>
+                                        <td><t t-esc="line['customer']"/></td>
+                                        <td><t t-esc="line['product']"/></td>
+                                        <td><t t-esc="line['salesperson']"/></td>
+                                        <td class="amount"><t t-esc="line['qty']"/></td>
+                                        <td class="amount"><t t-esc="'{:,.2f}'.format(line['cost_total'])"/></td>
+                                        <td class="amount"><t t-esc="'{:,.2f}'.format(line['price_unit'])"/></td>
+                                        <td class="amount"><t t-esc="'{:,.2f}'.format(line['subtotal'])"/></td>
+                                        <td class="amount"><t t-esc="'{:,.2f}'.format(line['margin'])"/></td>
+                                    </tr>
+                                </t>
+                            </t>
+                            <t t-if="not all_lines">
+                                <tr>
+                                    <td colspan="10" class="empty-state">Tidak ada data sales untuk filter yang dipilih.</td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="chart-view">
+                    <div class="chart-header">
+                        <div>
+                            <div class="chart-title">Sales Ratio Overview</div>
+                            <div class="chart-subtitle">Bandingkan sales, cost, dan margin ratio per periode.</div>
+                        </div>
+                        <div class="chart-range-switch">
+                            <button class="chart-range-btn js_chart_granularity" type="button" data-chart-granularity="week">Week</button>
+                            <button class="chart-range-btn js_chart_granularity" type="button" data-chart-granularity="month">Month</button>
+                            <button class="chart-range-btn js_chart_granularity" type="button" data-chart-granularity="year">Year</button>
+                        </div>
+                    </div>
+                    <div class="chart-kpis">
+                        <div class="chart-kpi">
+                            <div class="chart-kpi-label">Total Sales</div>
+                            <div class="chart-kpi-value js_chart_total_sales">0.00</div>
+                        </div>
+                        <div class="chart-kpi">
+                            <div class="chart-kpi-label">Average Ratio</div>
+                            <div class="chart-kpi-value js_chart_avg_ratio">0%</div>
+                        </div>
+                        <div class="chart-kpi">
+                            <div class="chart-kpi-label">Best Ratio</div>
+                            <div class="chart-kpi-value js_chart_best_ratio">0%</div>
+                        </div>
+                        <div class="chart-kpi">
+                            <div class="chart-kpi-label">Best Sales</div>
+                            <div class="chart-kpi-value js_chart_best_sales">0.00</div>
+                        </div>
+                    </div>
+                    <div class="chart-stage">
+                        <div class="chart-canvas-wrap">
+                            <canvas class="js_sales_chart_canvas"/>
+                            <div class="chart-empty js_chart_empty">Belum ada data untuk ditampilkan.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="dynamic_group_row">
+        <t t-foreach="nodes" t-as="key">
+            <t t-set="current_id" t-value="parent_id + '_' + str(key_index)"/>
+            <tr
+                t-attf-class="group-row row-clickable child-of-{{parent_id}}"
+                t-att-data-id="current_id"
+                t-att-style="'display: none;' if level > 0 else ''"
+            >
+                <td t-attf-style="padding-left: {{12 + (level * 24)}}px;">
+                    <span class="arrow">&#9654;</span>
+                    <t t-esc="key"/>
+                </td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td class="amount"></td>
+                <td class="amount"></td>
+                <td class="amount"></td>
+                <td class="amount"><t t-esc="'{:,.2f}'.format(nodes[key]['total'])"/></td>
+                <td class="amount"><t t-esc="'{:,.2f}'.format(nodes[key]['margin'])"/></td>
+            </tr>
+
+            <t t-if="nodes[key].get('children')">
+                <t t-call="sale_sales_report_example.dynamic_group_row">
+                    <t t-set="nodes" t-value="nodes[key]['children']"/>
+                    <t t-set="parent_id" t-value="current_id"/>
+                    <t t-set="level" t-value="level + 1"/>
+                </t>
+            </t>
+
+            <t t-foreach="nodes[key].get('lines', [])" t-as="line">
+                <tr t-attf-class="detail-row child-of-{{current_id}} clickable-row js-open-order" t-att-data-order-id="line['order_id']">
+                    <td t-attf-style="padding-left: {{36 + (level * 24)}}px;"><span class="ref-pill"><t t-esc="line['ref']"/></span></td>
+                    <td><t t-esc="line['date_order']"/></td>
+                    <td><t t-esc="line['customer']"/></td>
+                    <td><t t-esc="line['product']"/></td>
+                    <td><t t-esc="line['salesperson']"/></td>
+                    <td class="amount"><t t-esc="line['qty']"/></td>
+                    <td class="amount"><t t-esc="'{:,.2f}'.format(line['cost_total'])"/></td>
+                    <td class="amount"><t t-esc="'{:,.2f}'.format(line['price_unit'])"/></td>
+                    <td class="amount"><t t-esc="'{:,.2f}'.format(line['subtotal'])"/></td>
+                    <td class="amount"><t t-esc="'{:,.2f}'.format(line['margin'])"/></td>
+                </tr>
+            </t>
+        </t>
+    </template>
+</odoo>

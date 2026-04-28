@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_sales_report_client_js" model="ir.actions.client">
+        <field name="name">Sales Analysis View</field>
+        <field name="tag">sale_sales_report.sales_client_action</field>
+        <field name="context">{'month': '', 'year': '', 'customer_ids': []}</field>
+    </record>
+
+    <record id="action_direct_sales_report" model="ir.actions.client">
+    <field name="name">Sales Analysis Report</field>
+    <field name="tag">sale_sales_report.sales_client_action</field>
+    <field name="context">{}</field> 
+    </record>
+
+<menuitem id="menu_sale_report_wizard"
+          name="Sales Analysis (Direct)"
+          parent="sale.menu_sale_report"
+          action="action_direct_sales_report" 
+          sequence="10"/>
+
+<template id="fix_apple_meta_deprecated" inherit_id="web.webclient_bootstrap">
+        <xpath expr="//meta[@name='apple-mobile-web-app-capable']" position="after">
+            <meta name="mobile-web-app-capable" content="yes"/>
+        </xpath>
+    </template>
+</odoo>

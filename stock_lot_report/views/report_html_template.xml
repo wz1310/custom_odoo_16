@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+<template id="report_html">
+<div class="slr-root">
+<style>
+.slr-root { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f0fdf4; min-height: 100%; }
+
+/* KPI */
+.slr-kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 20px 24px 0; }
+.slr-kpi-card {
+    background: white; border-radius: 14px; padding: 18px 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06); border: 1px solid #f0fdf4;
+    display: flex; align-items: center; gap: 14px;
+}
+.slr-kpi-icon {
+    width: 46px; height: 46px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
+}
+.slr-kpi-icon.teal   { background: #ccfbf1; color: #0f766e; }
+.slr-kpi-icon.green  { background: #dcfce7; color: #16a34a; }
+.slr-kpi-icon.blue   { background: #dbeafe; color: #2563eb; }
+.slr-kpi-icon.orange { background: #ffedd5; color: #ea580c; }
+.slr-kpi-info p  { margin: 0; font-size: 11px; color: #94a3b8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.4px; }
+.slr-kpi-info h4 { margin: 2px 0 0; font-size: 20px; font-weight: 700; color: #1e293b; }
+
+/* TABLE */
+.slr-body { padding: 16px 24px 24px; }
+.slr-table-section {
+    background: white; border-radius: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06); border: 1px solid #f0fdf4; overflow: hidden;
+}
+.slr-table-header {
+    padding: 16px 20px; display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid #f0fdf4;
+}
+.slr-section-title { font-size: 13px; font-weight: 700; color: #1e293b; margin: 0; }
+.slr-table-scroll { overflow-x: auto; max-height: calc(100vh - 300px); overflow-y: auto; }
+.slr-table { width: 100%; border-collapse: collapse; }
+.slr-table thead th {
+    position: sticky; top: 0; background: #f8fafc; padding: 11px 14px;
+    font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase;
+    letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; white-space: nowrap;
+}
+.slr-table tbody tr { transition: background 0.15s; }
+.slr-table tbody tr:hover { background: #f0fdf4; }
+.slr-table tbody td { padding: 9px 14px; font-size: 12px; color: #374151; border-bottom: 1px solid #f8fafc; }
+
+.slr-lot-badge { display: inline-block; background: #ccfbf1; color: #0f766e; border-radius: 5px; padding: 2px 8px; font-size: 10px; font-weight: 700; }
+.slr-no-lot { color: #cbd5e1; font-style: italic; font-size: 11px; }
+.slr-qty { font-family: 'Monaco', 'Consolas', monospace; font-weight: 600; color: #0f766e; text-align: right; }
+.slr-qty-neg { font-family: 'Monaco', 'Consolas', monospace; font-weight: 600; color: #dc2626; text-align: right; }
+.slr-empty { text-align: center; padding: 48px; color: #94a3b8; font-size: 14px; }
+.slr-location-cell { font-size: 11px; color: #64748b; }
+.slr-product-cell  { font-weight: 600; color: #1e293b; }
+
+/* Zebra stripe */
+.slr-loc-even td { background: #fafffe; }
+.slr-loc-odd  td { background: #ffffff; }
+.slr-loc-even:hover td, .slr-loc-odd:hover td { background: #f0fdf4 !important; }
+
+/* Group L1 header */
+.slr-group-l1 td {
+    background: #0f766e !important; font-weight: 700; color: white;
+    font-size: 11px; padding: 8px 14px; border-bottom: 2px solid #0d9488;
+}
+.slr-group-l1:hover td { background: #0d9488 !important; }
+
+/* Group L2 header + single-level */
+.slr-group-l2 td, .slr-group-header td {
+    background: #e6faf8 !important; font-weight: 700; color: #0f766e;
+    font-size: 11px; padding: 7px 14px 7px 28px; border-bottom: 1px solid #99f6e4;
+}
+.slr-group-l2:hover td, .slr-group-header:hover td { background: #ccfbf1 !important; }
+
+/* Fold */
+.slr-group-l1, .slr-group-l2, .slr-group-header { cursor: pointer; user-select: none; }
+.slr-fold-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; border-radius: 4px;
+    background: rgba(255,255,255,0.2); color: inherit;
+    font-size: 10px; font-weight: 900; margin-right: 8px;
+    transition: transform 0.2s ease; flex-shrink: 0; vertical-align: middle;
+}
+.slr-group-l1.folded .slr-fold-icon,
+.slr-group-l2.folded .slr-fold-icon,
+.slr-group-header.folded .slr-fold-icon { transform: rotate(-90deg); }
+.slr-group-row.slr-hidden, .slr-group-l2.slr-hidden { display: none; }
+</style>
+
+<!-- KPI CARDS -->
+<div class="slr-kpi-row">
+    <div class="slr-kpi-card">
+        <div class="slr-kpi-icon teal">&#128205;</div>
+        <div class="slr-kpi-info"><p>Lokasi</p><h4><t t-esc="kpi['total_locations']"/></h4></div>
+    </div>
+    <div class="slr-kpi-card">
+        <div class="slr-kpi-icon green">&#128230;</div>
+        <div class="slr-kpi-info"><p>Produk</p><h4><t t-esc="kpi['total_products']"/></h4></div>
+    </div>
+    <div class="slr-kpi-card">
+        <div class="slr-kpi-icon blue">&#127991;</div>
+        <div class="slr-kpi-info"><p>Lot/Serial</p><h4><t t-esc="kpi['total_lots']"/></h4></div>
+    </div>
+    <div class="slr-kpi-card">
+        <div class="slr-kpi-icon orange">&#9889;</div>
+        <div class="slr-kpi-info"><p>Total On Hand</p><h4><t t-esc="'{:,.2f}'.format(kpi['total_qty'])"/></h4></div>
+    </div>
+</div>
+
+<!-- TABLE -->
+<div class="slr-body">
+    <div class="slr-table-section">
+        <div class="slr-table-header">
+            <p class="slr-section-title">&#128202; Detail Stok per Lot</p>
+            <span style="font-size:11px; color:#94a3b8;"><t t-esc="len(lines)"/> baris</span>
+        </div>
+        <div class="slr-table-scroll">
+            <table class="slr-table">
+                <thead>
+                    <tr>
+                        <th style="width:30px;">No</th>
+                        <th>Lot / Serial Number</th>
+                        <th>Produk</th>
+                        <th>Lokasi</th>
+                        <th>UoM</th>
+                        <th style="text-align:right;">On Hand Qty</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <t t-if="lines">
+                        <t t-if="grouped">
+                            <t t-if="group_by2">
+                                <!-- 2-LEVEL GROUPED -->
+                                <t t-set="row_idx" t-value="0"/>
+                                <t t-foreach="grouped" t-as="grp">
+                                    <tr class="slr-group-l1" t-att-data-gid="str(grp_index)">
+                                        <td colspan="6">
+                                            <span class="slr-fold-icon">&#9660;</span>
+                                            &#128230; <t t-esc="grp['key']"/>
+                                            <span style="margin-left:8px; font-size:10px; opacity:0.75;">(<t t-esc="len(grp['subgroups'])"/> grup)</span>
+                                            <span style="float:right; font-family:monospace;"><t t-esc="'{:,.4f}'.format(grp['subtotal']).rstrip('0').rstrip('.')"/></span>
+                                        </td>
+                                    </tr>
+                                    <t t-foreach="grp['subgroups']" t-as="sub">
+                                        <t t-set="sub_gid" t-value="str(grp_index) + '-' + str(sub_index)"/>
+                                        <tr class="slr-group-l2" t-att-data-gid="sub_gid" t-att-data-pgid="str(grp_index)">
+                                            <td colspan="5">
+                                                <span class="slr-fold-icon">&#9660;</span>
+                                                &#128193; <t t-esc="sub['key']"/>
+                                                <span style="margin-left:8px; font-size:10px; color:#0d9488;">(<t t-esc="len(sub['lines'])"/> baris)</span>
+                                            </td>
+                                            <td style="text-align:right;"><t t-esc="'{:,.4f}'.format(sub['subtotal']).rstrip('0').rstrip('.')"/></td>
+                                        </tr>
+                                        <t t-set="grp_color" t-value="0"/>
+                                        <t t-set="prev_lot" t-value="''"/>
+                                        <t t-foreach="sub['lines']" t-as="line">
+                                            <t t-set="row_idx" t-value="row_idx + 1"/>
+                                            <t t-if="line['lot'] != prev_lot">
+                                                <t t-set="grp_color" t-value="(grp_color + 1) % 2"/>
+                                                <t t-set="prev_lot" t-value="line['lot']"/>
+                                            </t>
+                                            <tr t-attf-class="slr-loc-{{('even' if grp_color == 0 else 'odd')}} slr-group-row" t-att-data-gid="sub_gid" t-att-data-pgid="str(grp_index)">
+                                                <td style="color:#94a3b8; font-size:11px; text-align:center;"><t t-esc="row_idx"/></td>
+                                                <td><t t-if="line['lot']"><span class="slr-lot-badge"><t t-esc="line['lot']"/></span></t><t t-else=""><span class="slr-no-lot">Tidak ada lot</span></t></td>
+                                                <td class="slr-product-cell"><t t-esc="line['product']"/></td>
+                                                <td class="slr-location-cell"><t t-esc="line['location']"/></td>
+                                                <td style="color:#64748b; font-size:11px;"><t t-esc="line['uom']"/></td>
+                                                <td t-attf-class="slr-qty{{('-neg' if line['qty'] &lt; 0 else '')}}"><t t-esc="'{:,.4f}'.format(line['qty']).rstrip('0').rstrip('.')"/></td>
+                                            </tr>
+                                        </t>
+                                    </t>
+                                </t>
+                            </t>
+                            <t t-else="">
+                                <!-- SINGLE-LEVEL GROUPED -->
+                                <t t-set="row_idx" t-value="0"/>
+                                <t t-foreach="grouped" t-as="grp">
+                                    <tr class="slr-group-header" t-att-data-gid="str(grp_index)">
+                                        <td colspan="5">
+                                            <span class="slr-fold-icon">&#9660;</span>
+                                            &#128193; <t t-esc="grp['key']"/>
+                                            <span style="margin-left:8px; font-size:10px; color:#0d9488;">(<t t-esc="len(grp['lines'])"/> baris)</span>
+                                        </td>
+                                        <td style="text-align:right;"><t t-esc="'{:,.4f}'.format(grp['subtotal']).rstrip('0').rstrip('.')"/></td>
+                                    </tr>
+                                    <t t-set="grp_color" t-value="0"/>
+                                    <t t-set="prev_lot" t-value="''"/>
+                                    <t t-foreach="grp['lines']" t-as="line">
+                                        <t t-set="row_idx" t-value="row_idx + 1"/>
+                                        <t t-if="line['lot'] != prev_lot">
+                                            <t t-set="grp_color" t-value="(grp_color + 1) % 2"/>
+                                            <t t-set="prev_lot" t-value="line['lot']"/>
+                                        </t>
+                                        <tr t-attf-class="slr-loc-{{('even' if grp_color == 0 else 'odd')}} slr-group-row" t-att-data-gid="str(grp_index)">
+                                            <td style="color:#94a3b8; font-size:11px; text-align:center;"><t t-esc="row_idx"/></td>
+                                            <td><t t-if="line['lot']"><span class="slr-lot-badge"><t t-esc="line['lot']"/></span></t><t t-else=""><span class="slr-no-lot">Tidak ada lot</span></t></td>
+                                            <td class="slr-product-cell"><t t-esc="line['product']"/></td>
+                                            <td class="slr-location-cell"><t t-esc="line['location']"/></td>
+                                            <td style="color:#64748b; font-size:11px;"><t t-esc="line['uom']"/></td>
+                                            <td t-attf-class="slr-qty{{('-neg' if line['qty'] &lt; 0 else '')}}"><t t-esc="'{:,.4f}'.format(line['qty']).rstrip('0').rstrip('.')"/></td>
+                                        </tr>
+                                    </t>
+                                </t>
+                            </t>
+                        </t>
+                        <t t-else="">
+                            <!-- FLAT VIEW -->
+                            <t t-set="row_idx" t-value="0"/>
+                            <t t-set="prev_lot" t-value="''"/>
+                            <t t-set="lot_color" t-value="0"/>
+                            <t t-foreach="lines" t-as="line">
+                                <t t-set="row_idx" t-value="row_idx + 1"/>
+                                <t t-if="line['lot'] != prev_lot">
+                                    <t t-set="lot_color" t-value="(lot_color + 1) % 2"/>
+                                    <t t-set="prev_lot" t-value="line['lot']"/>
+                                </t>
+                                <tr t-attf-class="slr-loc-{{('even' if lot_color == 0 else 'odd')}}">
+                                    <td style="color:#94a3b8; font-size:11px; text-align:center;"><t t-esc="row_idx"/></td>
+                                    <td><t t-if="line['lot']"><span class="slr-lot-badge"><t t-esc="line['lot']"/></span></t><t t-else=""><span class="slr-no-lot">Tidak ada lot</span></t></td>
+                                    <td class="slr-product-cell"><t t-esc="line['product']"/></td>
+                                    <td class="slr-location-cell"><t t-esc="line['location']"/></td>
+                                    <td style="color:#64748b; font-size:11px;"><t t-esc="line['uom']"/></td>
+                                    <td t-attf-class="slr-qty{{('-neg' if line['qty'] &lt; 0 else '')}}"><t t-esc="'{:,.4f}'.format(line['qty']).rstrip('0').rstrip('.')"/></td>
+                                </tr>
+                            </t>
+                        </t>
+                    </t>
+                    <t t-else="">
+                        <tr><td colspan="6" class="slr-empty">&#128269; Tidak ada data stok untuk filter ini.</td></tr>
+                    </t>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+</div>
+</template>
+</odoo>

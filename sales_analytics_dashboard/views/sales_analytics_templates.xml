@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Main Dashboard Template -->
+    <template id="analytics_dashboard_html">
+        <div class="sales-analytics-root">
+            
+             <!-- Header -->
+             <header class="sales-header">
+                 <div class="sales-header-content">
+                     <div class="sales-header-left">
+                         <h1 class="sales-title">
+                             <span class="sales-icon animated-icon">📊</span>
+                             Sales Analytics Dashboard
+                         </h1>
+                         <p class="sales-subtitle" t-esc="periode_label"/>
+                     </div>
+                     <div class="sales-header-right">
+                         <div class="sales-header-actions">
+                             <button class="sales-btn sales-btn-primary" 
+                                     onclick="applySalesFilters()">
+                                 <span>Apply Filters</span>
+                             </button>
+                             <button class="sales-btn sales-btn-refresh" 
+                                     onclick="location.reload()">
+                                 <span>Refresh</span>
+                             </button>
+                         </div>
+                         <div class="sales-header-date">
+                             <span class="sales-date-time" id="currentDateTime"></span>
+                         </div>
+                     </div>
+                 </div>
+             </header>
+
+            <!-- Filters -->
+            <section class="sales-filters">
+                <div class="sales-filters-container">
+                    <div class="sales-filter-group">
+                        <label>Date Range</label>
+                        <div class="sales-date-range">
+<input type="date" name="date_from" t-att-value="date_from"/>
+                            <span>to</span>
+<input type="date" name="date_to" t-att-value="date_to"/>
+                        </div>
+                    </div>
+                    <div class="sales-filter-group">
+                        <label>Group By</label>
+                        <div class="sales-groupby-container">
+                            <t t-foreach="active_groups" t-as="gb">
+                                <span class="sales-badge">
+                                    <t t-if="gb == 'customer'">👥 Customer</t>
+                                    <t t-if="gb == 'order'">📦 Order</t>
+                                    <t t-if="gb == 'product'">🏷️ Product</t>
+                                    <t t-if="gb == 'salesperson'">👤 Salesperson</t>
+                                     <button class="sales-badge-remove" t-attf-onclick="removeGroup('#{gb}')">×</button>
+                                </span>
+                            </t>
+                            <div class="sales-dropdown">
+                                <button class="sales-add-btn" onclick="toggleGroupDropdown()">+ Add Group</button>
+                                <div class="sales-dropdown-menu" id="groupDropdown">
+                                    <div class="sales-dropdown-item" onclick="addGroup('customer')">👥 Customer</div>
+                                    <div class="sales-dropdown-item" onclick="addGroup('order')">📦 Order</div>
+                                    <div class="sales-dropdown-item" onclick="addGroup('product')">🏷️ Product</div>
+                                    <div class="sales-dropdown-item" onclick="addGroup('salesperson')">👤 Salesperson</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- KPI Cards -->
+            <div class="sales-kpi-grid">
+                <div class="sales-kpi-card" data-kpi="total_revenue">
+                    <div class="sales-kpi-icon">💰</div>
+                    <div class="sales-kpi-info">
+                        <h4>Total Revenue</h4>
+                        <p t-esc="'{:,.0f}'.format(kpi['total_revenue'])"/>
+                    </div>
+                </div>
+                <div class="sales-kpi-card" data-kpi="total_orders">
+                    <div class="sales-kpi-icon">📦</div>
+                    <div class="sales-kpi-info">
+                        <h4>Total Orders</h4>
+                        <p t-esc="kpi['total_orders']"/>
+                    </div>
+                </div>
+                <div class="sales-kpi-card" data-kpi="total_customers">
+                    <div class="sales-kpi-icon">👥</div>
+                    <div class="sales-kpi-info">
+                        <h4>Total Customers</h4>
+                        <p t-esc="kpi['total_customers']"/>
+                    </div>
+                </div>
+                <div class="sales-kpi-card" data-kpi="total_products">
+                    <div class="sales-kpi-icon">🏷️</div>
+                    <div class="sales-kpi-info">
+                        <h4>Total Products</h4>
+                        <p t-esc="kpi['total_products']"/>
+                    </div>
+                </div>
+                <div class="sales-kpi-card" data-kpi="total_qty">
+                    <div class="sales-kpi-icon">📊</div>
+                    <div class="sales-kpi-info">
+                        <h4>Total Quantity</h4>
+                        <p t-esc="'{:,.0f}'.format(kpi['total_qty'])"/>
+                    </div>
+                </div>
+                <div class="sales-kpi-card" data-kpi="avg_order_value">
+                    <div class="sales-kpi-icon">📈</div>
+                    <div class="sales-kpi-info">
+                        <h4>Avg Order Value</h4>
+                        <p t-esc="'{:,.0f}'.format(kpi['avg_order_value'])"/>
+                    </div>
+                </div>
+                <div class="sales-kpi-card" data-kpi="total_margin">
+                    <div class="sales-kpi-icon">💹</div>
+                    <div class="sales-kpi-info">
+                        <h4>Total Margin</h4>
+                        <p t-esc="'{:,.0f}'.format(kpi['total_margin'])"/>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <section class="sales-charts">
+                <div class="sales-chart-card">
+                    <h3>📈 Revenue Trends</h3>
+                    <div class="sales-trend-chart">
+                        <div class="sales-chart-bars">
+                            <t t-set="trends_data" t-value="json.loads(trends)"/>
+                            <t t-foreach="trends_data.items()" t-as="trend">
+                                <t t-set="bar_pct" t-value="int((trend[1]['revenue'] / max(t[1]['revenue'] for t in trends_data.items())) * 100) if trends_data else 0"/>
+                                <div class="sales-chart-bar">
+                                    <span class="sales-bar-value">
+                                        <t t-esc="'{:,.0f}'.format(trend[1]['revenue'])"/>
+                                    </span>
+                                    <div class="sales-bar-inner" 
+                                         t-att-style="'height: ' + str(max(bar_pct, 2)) + '%;'"></div>
+                                    <span class="sales-bar-label" t-esc="trend[0]"/>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Top Metrics -->
+            <section class="sales-top-metrics">
+                <div class="sales-metrics-grid">
+                    <div class="sales-metric-card">
+                        <h4>🏆 Top Customers</h4>
+                        <div class="sales-metric-list">
+                            <t t-foreach="top_customers" t-as="customer">
+                                <div class="sales-metric-item">
+                                    <span t-esc="customer[0]"/>
+                                    <span class="sales-metric-value" 
+                                          t-esc="'{:,.0f}'.format(customer[1])"/>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                    <div class="sales-metric-card">
+                        <h4>⭐ Top Products</h4>
+                        <div class="sales-metric-list">
+                            <t t-foreach="top_products" t-as="product">
+                                <div class="sales-metric-item">
+                                    <span t-esc="product[0]"/>
+                                    <span class="sales-metric-value" 
+                                          t-esc="'{:,.0f}'.format(product[1])"/>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Data Table -->
+            <section class="sales-table-section">
+                <div class="sales-table-header">
+                    <h3>📋 Sales Detail</h3>
+                    <div class="sales-table-actions">
+                        <input type="text" 
+                               placeholder="Search..."
+                               class="sales-search"
+                               onkeyup="filterSalesTable(this.value)"/>
+                    </div>
+                </div>
+                <div class="sales-table-container">
+                    <table class="sales-table">
+                        <thead>
+                            <tr>
+                                <th>Reference</th>
+                                <th>Date</th>
+                                <th>Customer</th>
+                                <th>Product</th>
+                                <th>Salesperson</th>
+                                <th>Team</th>
+                                <th>Qty</th>
+                                <th>Unit Price</th>
+                                <th>Subtotal</th>
+                                <th>Margin</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-if="active_groups">
+                                <t t-call="sales_analytics_dashboard.dynamic_group_rows">
+                                    <t t-set="nodes" t-value="analytics_data"/>
+                                    <t t-set="parent_id" t-value="'root'"/>
+                                    <t t-set="level" t-value="0"/>
+                                    <t t-set="base_url" t-value="base_url"/>
+                                </t>
+                            </t>
+                            <t t-else="">
+                                <t t-foreach="all_lines" t-as="line">
+                                    <tr class="sales-row-detail">
+                                        <td>
+                                            <a t-attf-href="{{base_url}}/web#id={{line['order_id']}}&amp;model=sale.order&amp;view_type=form"
+                                               target="_blank"
+                                               class="sales-ref-link"
+                                               t-esc="line['order_name']"/>
+                                        </td>
+                                        <td t-esc="line['date_order']"/>
+                                        <td t-esc="line['customer']"/>
+                                        <td t-esc="line['product']"/>
+                                        <td t-esc="line['salesperson']"/>
+                                        <td t-esc="line['team']"/>
+                                        <td t-esc="int(line['qty'])"/>
+                                        <td t-esc="'{:,.2f}'.format(line['price_unit'])"/>
+                                        <td t-esc="'{:,.2f}'.format(line['subtotal'])"/>
+                                        <td t-esc="'{:,.2f}'.format(line['margin'])"/>
+                                    </tr>
+                                </t>
+                            </t>
+                            <t t-if="not all_lines">
+                                <tr><td colspan="10" class="srm-empty">No data for this period.</td></tr>
+                            </t>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <script>
+            function applySalesFilters() {
+                const dateFrom = document.querySelector('[name="date_from"]').value;
+                const dateTo = document.querySelector('[name="date_to"]').value;
+                window.location.href = '/sales_analytics/data?date_from=' + dateFrom + '&amp;date_to=' + dateTo;
+            }
+
+            function filterSalesTable(query) {
+                const rows = document.querySelectorAll('.sales-row-detail');
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    row.style.display = text.includes(query.toLowerCase()) ? '' : 'none';
+                });
+            }
+
+            function toggleGroupDropdown() {
+                document.getElementById('groupDropdown').classList.toggle('open');
+            }
+
+            function addGroup(group) {
+                alert('Group added: ' + group);
+            }
+
+            function removeGroup(group) {
+                alert('Group removed: ' + group);
+            }
+
+            // Update date/time in header
+            function updateDateTime() {
+                const now = new Date();
+                const options = { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                };
+                const formattedDateTime = now.toLocaleDateString('id-ID', options);
+                document.getElementById('currentDateTime').textContent = formattedDateTime;
+            }
+
+            // Update every second
+            setInterval(updateDateTime, 1000);
+            // Initial call
+            updateDateTime();
+        </script>
+    </template>
+
+    <!-- Dynamic Group Rows Template -->
+    <template id="dynamic_group_rows">
+        <t t-foreach="nodes" t-as="key">
+            <t t-set="current_id" t-value="parent_id + '_' + str(key_index)"/>
+            <tr t-attf-class="sales-row-group level-{{level}}" 
+                t-att-data-id="current_id"
+                t-att-style="'display: none;' if level > 0 else ''">
+                <td colspan="7" t-attf-style="padding-left: {{14 + level * 22}}px !important;">
+                    <span class="sales-arrow">▶</span>
+                    <t t-esc="key"/>
+                </td>
+                <td style="text-align:right;" class="sales-amount-group">
+                    <t t-esc="'{:,.2f}'.format(nodes[key]['total'])"/>
+                </td>
+            </tr>
+
+            <t t-if="nodes[key].get('children')">
+                <t t-call="sales_analytics_dashboard.dynamic_group_rows">
+                    <t t-set="nodes" t-value="nodes[key]['children']"/>
+                    <t t-set="parent_id" t-value="current_id"/>
+                    <t t-set="level" t-value="level + 1"/>
+                </t>
+            </t>
+
+            <t t-if="nodes[key].get('lines')">
+                <t t-foreach="nodes[key]['lines']" t-as="line">
+                    <tr class="sales-row-detail">
+                        <td t-attf-style="padding-left: {{14 + (level + 1) * 22}}px !important;">
+                            <a t-attf-href="{{base_url}}/web#id={{line['order_id']}}&amp;model=sale.order&amp;view_type=form"
+                               target="_blank"
+                               class="sales-ref-link"
+                               t-esc="line['order_name']"/>
+                        </td>
+                        <td t-esc="line['date_order']"/>
+                        <td t-esc="line['customer']"/>
+                        <td t-esc="line['product']"/>
+                        <td t-esc="line['salesperson']"/>
+                        <td t-esc="line['team']"/>
+                        <td t-esc="int(line['qty'])"/>
+                        <td t-esc="'{:,.2f}'.format(line['price_unit'])"/>
+                        <td t-esc="'{:,.2f}'.format(line['subtotal'])"/>
+                        <td t-esc="'{:,.2f}'.format(line['margin'])"/>
+                    </tr>
+                </t>
+            </t>
+        </t>
+    </template>
+
+</odoo>

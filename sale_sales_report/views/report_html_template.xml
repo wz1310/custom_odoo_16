@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_sales_html_screen">
+        <div class="o_sales_intelligence_report d-flex flex-column h-100">
+            <style>
+                .o_sales_intelligence_report { font-family: 'Inter', sans-serif; height: 100%; background-color: #f8fafc; }
+                .header-box { 
+                    background: #1e3a8a; color: white !important; padding: 5px 25px; 
+                    position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    display: flex; justify-content: space-between; align-items: center;
+                }
+                .header-btn-group .btn {
+                    border-color: rgba(255,255,255,0.3); color: white;
+                    background: rgba(255,255,255,0.1); font-size: 11px; font-weight: 600;
+                }
+                .header-btn-group .btn.active { background: white !important; color: #1e3a8a !important; }
+                
+                .table-main { width: 100%; border-collapse: separate; border-spacing: 0; background: white; }
+                .table-main thead th { 
+                    position: sticky; top: 0px; background: #f1f5f9; z-index: 90;
+                    padding: 12px 15px; text-transform: uppercase; letter-spacing: 0.5px;
+                    font-size: 10px; color: #475569; border-bottom: 2px solid #e2e8f0;
+                }
+
+                /* Class untuk Baris Grouping */
+                .row-customer-group { background: #ffffff; cursor: pointer; transition: all 0.2s; }
+                .row-customer-group:hover { background: #f8fafc; }
+                .row-customer-group td { 
+                    padding: 5x 5px; font-weight: 700; color: #1e3a8a; 
+                    border-bottom: 1px solid #e2e8f0; font-size: 12px;
+                }
+
+                /* Class untuk Baris Detail */
+                .row-detail { display: none; background: #ffffff; }
+                .row-detail td { 
+                    padding: 2px 2px; font-size: 11.5px; color: #64748b;
+                    border-bottom: 1px solid #f8fafc;
+                }
+                
+                .icon-arrow { 
+                    width: 16px; transition: transform 0.3s ease; color: #94a3b8; font-size: 10px; margin-right: 8px;
+                }
+                .is-expanded > td > .icon-arrow { transform: rotate(90deg); color: #1e3a8a; }
+                
+                .text-amount { font-family: 'Monaco', 'Consolas', monospace; font-weight: 600; }
+                .badge-info-soft {
+                    background: #e0f2fe; color: #0369a1; padding: 2px 8px; 
+                    border-radius: 4px; font-size: 10px; font-weight: 700; text-decoration: none;
+                }
+            </style>
+
+            <div class="header-box">
+    <div style="flex: 1;">
+        <h4 style="margin:0; color:white !important; font-weight:700;">Sales Modern Report Analysis</h4>
+        <p style="color: #bfdbfe; margin: 0; opacity: 0.8; font-size: 0.85rem;">
+            Periode: <t t-esc="periode_label"/>
+        </p>
+    </div>
+    <div class="header-btn-group ms-2">
+    <button class="btn btn-sm btn-success js_export_excel" 
+            style="height: 32px; border-radius: 4px; display: flex; align-items: center; gap: 5px;">
+        <i class="fa fa-file-excel-o"></i> Excel
+    </button>
+    </div>
+    
+    <div style="flex: 1; display: flex; justify-content: center; align-items: flex-end; gap: 10px; padding-bottom: 2px;">
+        <div class="date-input-group">
+            <label style="display: block; font-size: 10px; color: #bfdbfe; margin-bottom: 2px; font-weight: 600;">From</label>
+            <input type="date" name="date_from" t-att-value="date_from" 
+                   class="form-control form-control-sm" 
+                   style="background: white; border: none; font-size: 11px; width: 140px; height: 32px; border-radius: 4px;"/>
+        </div>
+
+        <div class="date-input-group">
+            <label style="display: block; font-size: 10px; color: #bfdbfe; margin-bottom: 2px; font-weight: 600;">To</label>
+            <input type="date" name="date_to" t-att-value="date_to" 
+                   class="form-control form-control-sm" 
+                   style="background: white; border: none; font-size: 11px; width: 140px; height: 32px; border-radius: 4px;"/>
+        </div>
+
+        <button class="btn btn-sm btn-light js_apply_filter" 
+                style="height: 32px; min-width: 40px; display: flex; align-items: center; justify-content: center; border-radius: 4px; border: none;">
+            <i class="fa fa-filter" style="color: #1e3a8a; font-size: 14px;"></i>
+        </button>
+    </div>
+
+    <div style="flex: 1; display: flex; justify-content: flex-end; align-items: flex-end; padding-bottom: 2px;">
+        <div class="d-flex align-items-center gap-2" style="background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); min-width: 250px;">
+            <div class="d-flex flex-wrap gap-1" id="groupby_badges">
+                <t t-foreach="active_groups" t-as="gb">
+                    <span class="badge d-flex align-items-center gap-1" style="background: white; color: #1e3a8a; font-size: 10px; padding: 4px 8px; border-radius: 4px;">
+                        <t t-if="gb == 'customer'">Customer</t>
+                        <t t-if="gb == 'order'">Order</t>
+                        <t t-if="gb == 'product'">Product</t>
+                        <i class="fa fa-times js_remove_groupby" t-att-data-groupby="gb" style="cursor:pointer; opacity: 0.7;"></i>
+                    </span>
+                </t>
+            </div>
+            
+            <div class="dropdown">
+                <button class="btn btn-sm text-white p-0 ms-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fa fa-plus-circle" style="font-size: 18px; opacity: 0.9;"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow" style="font-size: 12px;">
+                    <li><a class="dropdown-item js_add_groupby" href="#" data-groupby="customer">Customer</a></li>
+                    <li><a class="dropdown-item js_add_groupby" href="#" data-groupby="order">Order</a></li>
+                    <li><a class="dropdown-item js_add_groupby" href="#" data-groupby="product">Product</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+            <div class="table-responsive-scroll" style="flex: 1; overflow-y: auto;">
+                <table class="table-main">
+                    <thead>
+                        <tr>
+                            <th>Reference / Description</th>
+                            <th>Order Date</th>
+                            <th>Product</th>
+                            <th>Salesperson</th>
+                            <th>Qty</th>
+                            <th>Unit Price</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+    <t t-if="active_groups">
+        <t t-call="sale_sales_report.dynamic_group_row">
+            <t t-set="nodes" t-value="report_data"/>
+            <t t-set="parent_id" t-value="'root'"/>
+            <t t-set="level" t-value="0"/>
+        </t>
+    </t>
+    <t t-else="">
+        <t t-foreach="all_lines" t-as="line">
+            <tr class="row-detail" style="display: table-row;"> <td style="padding-left: 15px !important; border-left: 3px solid #64748b;">
+                    <a class="badge-info-soft me-2" t-attf-href="{{base_url}}/web#id={{line['order_id']}}&amp;model=sale.order&amp;view_type=form" target="_blank">
+                        <t t-esc="line['ref']"/>
+                    </a>
+                </td>
+                <td><t t-esc="line['date_order']"/></td>
+                <td><t t-esc="line['product']"/></td>
+                <td><t t-esc="line['salesperson']"/></td>
+                <td><t t-esc="int(line['qty'])"/></td>
+                <td class="text-success text-amount">
+                    <t t-esc="'{:,.2f}'.format(line['price_unit'])"/>
+                </td>
+                <td class="text-success text-amount">
+                    <t t-esc="'{:,.2f}'.format(line['subtotal'])"/>
+                </td>
+            </tr>
+        </t>
+    </t>
+    
+    <t t-if="not all_lines">
+        <tr><td colspan="6" class="text-center py-5 text-muted">Tidak ada data.</td></tr>
+    </t>
+</tbody>
+                </table>
+            </div>
+        </div>
+    </template>
+
+    <template id="dynamic_group_row">
+        <t t-foreach="nodes" t-as="key">
+            <t t-set="current_id" t-value="parent_id + '_' + str(key_index)"/>
+            
+            <tr t-attf-class="row-customer-group row-clickable child-of-{{parent_id}}" 
+                t-att-data-id="current_id" 
+                t-att-style="'display: none;' if level > 0 else ''">
+                <td colspan="6" t-attf-style="padding-left: {{15 + (level * 25)}}px !important;">
+                    <i class="fa fa-chevron-right icon-arrow"></i>
+                    <t t-esc="key"/>
+                </td>
+                <td class="text-right text-amount">
+                    <t t-esc="'{:,.2f}'.format(nodes[key]['total'])"/>
+                </td>
+            </tr>
+
+            <t t-if="nodes[key].get('children')">
+                <t t-call="sale_sales_report.dynamic_group_row">
+                    <t t-set="nodes" t-value="nodes[key]['children']"/>
+                    <t t-set="parent_id" t-value="current_id"/>
+                    <t t-set="level" t-value="level + 1"/>
+                </t>
+            </t>
+
+            <t t-if="nodes[key].get('lines')">
+                <t t-foreach="nodes[key]['lines']" t-as="line">
+                    <tr t-attf-class="row-detail child-of-{{current_id}}">
+                        <td t-attf-style="padding-left: {{45 + (level * 25)}}px !important; border-left: 3px solid #1e3a8a;">
+                            <a class="badge-info-soft me-2" t-attf-href="{{base_url}}/web#id={{line['order_id']}}&amp;model=sale.order&amp;view_type=form" target="_blank">
+                                <t t-esc="line['ref']"/>
+                            </a>
+                            <!-- <t t-esc="line['product']"/> -->
+                        </td>
+                        <td><t t-esc="line['date_order']"/></td>
+                        <td><t t-esc="line['product']"/></td>
+                        <td><t t-esc="line['salesperson']"/></td>
+                        <td><t t-esc="int(line['qty'])"/></td>
+                        <td class="text-success">
+                            <t t-esc="'{:,.2f}'.format(line['price_unit'])"/>
+                        </td>
+                        <td class="text-success">
+                            <t t-esc="'{:,.2f}'.format(line['subtotal'])"/>
+                        </td>
+                    </tr>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>
