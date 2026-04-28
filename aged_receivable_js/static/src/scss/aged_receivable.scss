@@ -1,0 +1,96 @@
+.o_aged_receivable_report {
+    background-color: #f8f9fa;
+    min-height: 100%;
+
+    .sticky-top {
+        z-index: 100;
+        background-color: rgba(255, 255, 255, 0.9) !important;
+        backdrop-filter: blur(8px);
+    }
+
+    .aged-table {
+        border-collapse: separate;
+        border-spacing: 0;
+
+        thead th {
+            position: sticky;
+            top: 0;
+            background: #f8f9fa;
+            z-index: 100;
+            font-weight: 600;
+            color: #495057;
+            border-top: none;
+            border-bottom: 2px solid #dee2e6;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            cursor: help;
+        }
+
+        .totals-row {
+            font-size: 1rem;
+            background-color: #e3f2fd !important;
+            
+            &.sticky-bottom {
+                position: sticky;
+                bottom: 0;
+                z-index: 90;
+                border-top: 2px solid #dee2e6;
+            }
+
+            td {
+                padding-top: 0.75rem;
+                padding-bottom: 0.75rem;
+            }
+        }
+
+        .partner-row {
+            cursor: pointer;
+            transition: background-color 0.2s;
+
+            &:hover {
+                background-color: rgba(0, 135, 132, 0.05) !important;
+            }
+        }
+
+        .detail-row {
+            td {
+                padding-top: 0.5rem;
+                padding-bottom: 0.5rem;
+                font-size: 0.85rem;
+            }
+            
+            &:hover {
+                background-color: #e9ecef !important;
+            }
+        }
+
+        .clickable {
+            cursor: pointer;
+        }
+
+        .clickable-invoice {
+            cursor: pointer;
+            text-decoration: none;
+            
+            &:hover {
+                text-decoration: underline;
+                color: #0056b3 !important;
+            }
+        }
+
+        .x-small {
+            font-size: 0.7rem;
+        }
+    }
+}
+
+/* Transitions */
+.o_report_content {
+    animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}

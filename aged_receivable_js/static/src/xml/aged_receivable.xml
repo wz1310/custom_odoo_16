@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="aged_receivable_js.report_template" owl="1">
+        <div class="o_aged_receivable_report">
+            <div class="o_report_header px-4 py-3 bg-white border-bottom sticky-top">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="mb-0 fw-bold text-primary">Aged Receivable Report</h2>
+                        <span class="text-muted small">As of: <t t-esc="state.today"/></span>
+                    </div>
+                    <div class="d-flex gap-3 align-items-center">
+                        <div class="d-flex align-items-center gap-2 bg-light p-1 rounded border">
+                            <label for="date_as_of" class="small fw-bold text-muted mb-0 ps-2">AS OF:</label>
+                            <input type="date" 
+                                   id="date_as_of" 
+                                   class="form-control form-control-sm border-0 bg-transparent" 
+                                   t-att-value="state.selectedDate"
+                                   t-on-change="onDateChange"/>
+                        </div>
+                        <button class="btn btn-outline-secondary d-flex align-items-center gap-1" t-on-click="loadData">
+                            <i class="oi oi-refresh"/> Refresh
+                        </button>
+                        <button class="btn btn-success d-flex align-items-center gap-1" t-on-click="exportToExcel">
+                            <i class="oi oi-download"/> Export Excel
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="o_report_content p-4">
+                <t t-if="state.loading">
+                    <div class="d-flex justify-content-center align-items-center p-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </t>
+                <t t-else="">
+                    <div class="table-responsive shadow-sm rounded bg-white">
+                        <table class="table table-hover mb-0 aged-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4" data-tooltip="Nama Customer yang memiliki piutang">PARTNER</th>
+                                    <th class="text-center" data-tooltip="Aksi untuk membayar invoice">ACTION</th>
+                                    <th class="text-end" data-tooltip="Piutang yang belum jatuh tempo">NOT DUE</th>
+                                    <th class="text-end" data-tooltip="Piutang jatuh tempo 1 sampai 30 hari">1 - 30</th>
+                                    <th class="text-end" data-tooltip="Piutang jatuh tempo 31 sampai 60 hari">31 - 60</th>
+                                    <th class="text-end" data-tooltip="Piutang jatuh tempo 61 sampai 90 hari">61 - 90</th>
+                                    <th class="text-end" data-tooltip="Piutang jatuh tempo 91 sampai 120 hari">91 - 120</th>
+                                    <th class="text-end" data-tooltip="Piutang jatuh tempo lebih dari 120 hari">OLDER</th>
+                                    <th class="text-end pe-4" data-tooltip="Total piutang per partner">TOTAL</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="state.partners" t-as="partner" t-key="partner.name">
+                                    <tr class="partner-row clickable border-bottom" t-on-click="() => this.togglePartner(partner.name)">
+                                        <td class="ps-4 py-3">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <i t-attf-class="oi oi-chevron-#{state.expandedPartners.has(partner.name) ? 'down' : 'right'} small text-muted"/>
+                                                <span class="fw-bold text-dark"><t t-esc="partner.name"/></span>
+                                            </div>
+                                        </td>
+                                        <td class="text-center py-3"></td>
+                                        <td class="text-end py-3"><t t-esc="formatCurrency(partner.current)"/></td>
+                                        <td class="text-end py-3"><t t-esc="formatCurrency(partner.b1_30)"/></td>
+                                        <td class="text-end py-3"><t t-esc="formatCurrency(partner.b31_60)"/></td>
+                                        <td class="text-end py-3"><t t-esc="formatCurrency(partner.b61_90)"/></td>
+                                        <td class="text-end py-3"><t t-esc="formatCurrency(partner.b91_120)"/></td>
+                                        <td class="text-end py-3"><t t-esc="formatCurrency(partner.older)"/></td>
+                                        <td class="text-end pe-4 py-3 fw-bold"><t t-esc="formatCurrency(partner.total)"/></td>
+                                    </tr>
+                                    
+                                    <!-- Detail Lines -->
+                                    <t t-if="state.expandedPartners.has(partner.name)">
+                                        <t t-foreach="partner.lines" t-as="line" t-key="line.move_name">
+                                            <tr class="detail-row bg-light border-bottom text-muted small">
+                                                <td class="ps-5 py-2">
+                                                    <div class="d-flex flex-column">
+                                                        <span class="text-primary fw-bold clickable-invoice" 
+                                                              t-on-click.stop="() => this.openInvoice(line.move_id)"
+                                                              t-att-data-tooltip="line.age > 0 ? 'Telat ' + line.age + ' hari dari tanggal jatuh tempo' : 'Belum jatuh tempo'">
+                                                            <t t-esc="line.move_name"/>
+                                                        </span>
+                                                        <span class="x-small text-muted"><t t-esc="line.ref"/></span>
+                                                    </div>
+                                                </td>
+                                                <td class="text-center py-2">
+                                                    <button class="btn btn-sm btn-success py-0 px-2" 
+                                                            t-on-click.stop="() => this.registerPayment(line.move_id)">
+                                                        Register Payment
+                                                    </button>
+                                                </td>
+                                                <td class="text-end py-2"><t t-if="line.bucket == 'current'" t-esc="formatCurrency(line.amount)"/></td>
+                                                <td class="text-end py-2"><t t-if="line.bucket == 'b1_30'" t-esc="formatCurrency(line.amount)"/></td>
+                                                <td class="text-end py-2"><t t-if="line.bucket == 'b31_60'" t-esc="formatCurrency(line.amount)"/></td>
+                                                <td class="text-end py-2"><t t-if="line.bucket == 'b61_90'" t-esc="formatCurrency(line.amount)"/></td>
+                                                <td class="text-end py-2"><t t-if="line.bucket == 'b91_120'" t-esc="formatCurrency(line.amount)"/></td>
+                                                <td class="text-end py-2"><t t-if="line.bucket == 'older'" t-esc="formatCurrency(line.amount)"/></td>
+                                                <td class="text-end pe-4 py-2 border-start"><t t-esc="formatCurrency(line.amount)"/></td>
+                                            </tr>
+                                        </t>
+                                    </t>
+                                </t>
+                            </tbody>
+                            <tfoot class="table-info fw-bold totals-row sticky-bottom">
+                                <tr>
+                                    <td class="ps-4 py-3">TOTALS</td>
+                                    <td class="text-center py-3"></td>
+                                    <td class="text-end py-3"><t t-esc="formatCurrency(state.totals.current)"/></td>
+                                    <td class="text-end py-3"><t t-esc="formatCurrency(state.totals.b1_30)"/></td>
+                                    <td class="text-end py-3"><t t-esc="formatCurrency(state.totals.b31_60)"/></td>
+                                    <td class="text-end py-3"><t t-esc="formatCurrency(state.totals.b61_90)"/></td>
+                                    <td class="text-end py-3"><t t-esc="formatCurrency(state.totals.b91_120)"/></td>
+                                    <td class="text-end py-3"><t t-esc="formatCurrency(state.totals.older)"/></td>
+                                    <td class="text-end pe-4 py-3"><t t-esc="formatCurrency(state.totals.total)"/></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </t>
+            </div>
+        </div>
+    </t>
+</templates>
