@@ -8,18 +8,52 @@ from odoo.tools.misc import xlsxwriter
 
 class AgedReceivableController(http.Controller):
 
-    def _get_report_data(self, date_as_of):
-        # Find all receivable lines that existed on or before the selected date
-        domain = [
-            ('account_id.account_type', '=', 'asset_receivable'),
-            ('parent_state', '=', 'posted'),
-            ('date', '<=', date_as_of),
-        ]
+    def _get_report_data(self, date_as_of, company_ids=None):
+        if not company_ids:
+            company_ids = tuple(request.env.companies.ids)
+        else:
+            # Handle if passed as string from URL
+            if isinstance(company_ids, str):
+                company_ids = tuple(int(x) for x in company_ids.split(','))
+            else:
+                company_ids = tuple(company_ids)
         
-        # Check for company filtering
-        domain.append(('company_id', '=', request.env.company.id))
-
-        move_lines = request.env['account.move.line'].search(domain)
+        # Optimized SQL Query to fetch all data in one go
+        query = """
+            SELECT 
+                aml.id,
+                p.id as partner_id,
+                p.name as partner_name,
+                m.id as move_id,
+                m.name as move_name,
+                m.ref as move_ref,
+                m.payment_state as payment_state,
+                aml.date as date,
+                COALESCE(aml.date_maturity, aml.date) as date_maturity,
+                aml.balance,
+                (
+                    SELECT COALESCE(SUM(pr.amount), 0)
+                    FROM account_partial_reconcile pr
+                    JOIN account_move_line aml2 ON (
+                        (pr.debit_move_id = aml.id AND pr.credit_move_id = aml2.id) OR
+                        (pr.credit_move_id = aml.id AND pr.debit_move_id = aml2.id)
+                    )
+                    WHERE aml2.date <= %s
+                ) as reconciled_amount
+            FROM account_move_line aml
+            JOIN account_move m ON m.id = aml.move_id
+            JOIN res_partner p ON p.id = aml.partner_id
+            JOIN account_account acc ON acc.id = aml.account_id
+            WHERE acc.account_type = 'asset_receivable'
+              AND m.state = 'posted'
+              AND aml.date <= %s
+              AND aml.company_id IN %s
+              AND m.payment_state NOT IN ('paid', 'in_payment')
+            ORDER BY p.name, aml.date
+        """
+        
+        request.env.cr.execute(query, (date_as_of, date_as_of, company_ids))
+        results = request.env.cr.dictfetchall()
         
         partners_data = {}
         totals = {
@@ -32,34 +66,21 @@ class AgedReceivableController(http.Controller):
             'total': 0.0
         }
 
-        for line in move_lines:
-            # Calculate residual as of date_as_of
-            balance = line.balance
-            
-            partials = request.env['account.partial.reconcile'].search([
-                '|',
-                ('debit_move_id', '=', line.id),
-                ('credit_move_id', '=', line.id)
-            ])
-            
-            reconciled_amount = 0.0
-            for partial in partials:
-                counterpart_line = partial.credit_move_id if partial.debit_move_id == line else partial.debit_move_id
-                if counterpart_line.date <= date_as_of:
-                    reconciled_amount += partial.amount
+        currency = request.env.company.currency_id
 
-            if line.balance > 0:
-                residual = max(0, line.balance - reconciled_amount)
+        for res in results:
+            # Calculate residual
+            if res['balance'] > 0:
+                residual = max(0, res['balance'] - res['reconciled_amount'])
             else:
-                residual = min(0, line.balance + reconciled_amount)
+                residual = min(0, res['balance'] + res['reconciled_amount'])
 
-            # Skip if fully paid as of that date OR currently already paid/in_payment
-            if request.env.company.currency_id.is_zero(residual) or line.move_id.payment_state in ['paid', 'in_payment']:
+            # Skip if fully paid as of that date
+            if currency.is_zero(residual):
                 continue
 
-            partner = line.partner_id
-            partner_id = partner.id or 0
-            partner_name = partner.name or "Unknown Partner"
+            partner_id = res['partner_id'] or 0
+            partner_name = res['partner_name'] or "Unknown Partner"
             
             if partner_id not in partners_data:
                 partners_data[partner_id] = {
@@ -74,7 +95,7 @@ class AgedReceivableController(http.Controller):
                     'lines': []
                 }
             
-            due_date = line.date_maturity or line.date
+            due_date = res['date_maturity']
             age = (date_as_of - due_date).days
             amount = residual
             
@@ -98,12 +119,12 @@ class AgedReceivableController(http.Controller):
             totals['total'] += amount
             
             partners_data[partner_id]['lines'].append({
-                'move_id': line.move_id.id,
-                'move_name': line.move_id.name,
-                'payment_state': line.move_id.payment_state,
-                'ref': line.move_id.ref or '',
-                'date': line.date.strftime('%Y-%m-%d'),
-                'due_date': due_date.strftime('%Y-%m-%d'),
+                'move_id': res['move_id'],
+                'move_name': res['move_name'],
+                'payment_state': res['payment_state'],
+                'ref': res['move_ref'] or '',
+                'date': res['date'].strftime('%d/%m/%Y'),
+                'due_date': due_date.strftime('%d/%m/%Y'),
                 'age': age,
                 'amount': amount,
                 'bucket': bucket
@@ -117,26 +138,27 @@ class AgedReceivableController(http.Controller):
             'currency': request.env.company.currency_id.name,
             'currency_symbol': request.env.company.currency_id.symbol,
             'currency_position': request.env.company.currency_id.position,
-            'today': date_as_of.strftime('%Y-%m-%d')
+            'today': date_as_of.strftime('%d/%m/%Y')
         }
 
     @http.route('/aged_receivable/data', type='json', auth='user')
     def get_aged_receivable_data(self, **kwargs):
         date_str = kwargs.get('date_to')
+        company_ids = kwargs.get('company_ids')
         if date_str:
             date_as_of = datetime.strptime(date_str, '%Y-%m-%d').date()
         else:
             date_as_of = date.today()
-        return self._get_report_data(date_as_of)
+        return self._get_report_data(date_as_of, company_ids=company_ids)
 
     @http.route('/aged_receivable/export', type='http', auth='user')
-    def export_aged_receivable_excel(self, date_to=None, **kwargs):
+    def export_aged_receivable_excel(self, date_to=None, company_ids=None, **kwargs):
         if date_to:
             date_as_of = datetime.strptime(date_to, '%Y-%m-%d').date()
         else:
             date_as_of = date.today()
 
-        data = self._get_report_data(date_as_of)
+        data = self._get_report_data(date_as_of, company_ids=company_ids)
         
         output = io.BytesIO()
         workbook = xlsxwriter.Workbook(output, {'in_memory': True})
@@ -153,7 +175,7 @@ class AgedReceivableController(http.Controller):
 
         # Header info
         sheet.merge_range('A1:H1', 'Aged Receivable Report', title_format)
-        sheet.write('A2', f'As of: {date_as_of}')
+        sheet.write('A2', f'As of: {date_as_of.strftime("%d/%m/%Y")}')
         sheet.write('A3', f'Currency: {data["currency"]}')
 
         # Table headers
@@ -193,6 +215,9 @@ class AgedReceivableController(http.Controller):
         sheet.write(row, 1, totals['current'], total_row_format)
         sheet.write(row, 2, totals['b1_30'], total_row_format)
         sheet.write(row, 3, totals['b31_60'], total_row_format)
+        sheet.write(row, 4, totals['total'], total_row_format) # Wait, index was wrong in my thought
+        # Correcting columns for totals
+        sheet.write(row, 3, totals['b31_60'], total_row_format)
         sheet.write(row, 4, totals['b61_90'], total_row_format)
         sheet.write(row, 5, totals['b91_120'], total_row_format)
         sheet.write(row, 6, totals['older'], total_row_format)
@@ -201,7 +226,7 @@ class AgedReceivableController(http.Controller):
         workbook.close()
         output.seek(0)
         
-        filename = f'Aged_Receivable_{date_as_of}.xlsx'
+        filename = f'Aged_Receivable_{date_as_of.strftime("%d-%m-%Y")}.xlsx'
         return request.make_response(
             output.getvalue(),
             headers=[

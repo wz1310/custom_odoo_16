@@ -31,8 +31,9 @@ export class AgedReceivableReport extends Component {
     async loadData() {
         this.state.loading = true;
         try {
+            const companyIds = this.companyService.allowedCompanyIds;
             const data = await this.rpc("/aged_receivable/data", {
-                company_ids: this.companyService.allowedCompanyIds,
+                company_ids: companyIds,
                 date_to: this.state.selectedDate,
             });
             this.state.partners = data.partners;
@@ -90,7 +91,8 @@ export class AgedReceivableReport extends Component {
     }
 
     exportToExcel() {
-        const url = `/aged_receivable/export?date_to=${this.state.selectedDate}`;
+        const companyIds = this.companyService.allowedCompanyIds.join(',');
+        const url = `/aged_receivable/export?date_to=${this.state.selectedDate}&company_ids=${companyIds}`;
         window.location.href = url;
     }
 
