@@ -1,0 +1,440 @@
+<templates>
+    <t t-name="TrialTemp">
+        <div class="">
+            <div class="">
+                <h1 style="padding:10px">
+                    Trial Balance
+                </h1>
+
+            </div>
+
+            <div>
+                <div class="filter_view_tb"></div>
+            </div>
+            <br></br>
+            <div>
+                <div class="table_view_tb" style="right:20px;"></div>
+            </div>
+        </div>
+    </t>
+    <t t-name="TrialTable">
+        <div>
+            <div class="table_main_view">
+                <table cellspacing="0" width="100%">
+                    <thead>
+                        <tr>
+                            <th colspan="6">Account</th>
+                            <t t-if="filter['date_from']">
+                                <th class="mon_fld">Initial Debit</th>
+                                <th class="mon_fld">Initial Credit</th>
+
+                            </t>
+                            <th class="mon_fld">Debit</th>
+                            <th class="mon_fld">Credit</th>
+                            <t t-if="filter and filter['comparison_years'] and filter['comparison_years'] > 0">
+                                <t t-foreach="_.range(1, filter['comparison_years'] + 1)" t-as="i">
+                                    <t t-set="current_year" t-value="new Date().getFullYear()"/>
+                                    <t t-set="target_year" t-value="current_year - i"/>
+                                    <th class="mon_fld"><t t-esc="target_year"/> Debit</th>
+                                    <th class="mon_fld"><t t-esc="target_year"/> Credit</th>
+                                </t>
+                            </t>
+                            <t t-if="filter and filter['comparison_months'] and filter['comparison_months'] > 0">
+                                <t t-foreach="_.range(1, filter['comparison_months'] + 1)" t-as="i">
+                                    <t t-set="month_names" t-value="['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']"/>
+                                    <t t-set="current_date" t-value="new Date()"/>
+                                    <t t-set="current_month" t-value="current_date.getMonth()"/>
+                                    <t t-set="target_month" t-value="(current_month - i + 12) % 12"/>
+                                    <th class="mon_fld"><t t-esc="month_names[target_month]"/> Debit</th>
+                                    <th class="mon_fld"><t t-esc="month_names[target_month]"/> Credit</th>
+                                </t>
+                            </t>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        <t t-set="none_value" t-value="_"/>
+                        <t t-foreach="report_lines" t-as="account">
+                            <t t-set="common_id" t-value="0"/>
+                            <tr style="border: 1.5px solid black;" class="gl-line"
+                                data-bs-toggle="collapse"
+                                t-att-data-account-id="account['id']"
+                                t-attf-data-target=".a{{account['id']}}">
+                                <td colspan="6" style="border: 0px solid black;">
+                                    <span>
+                                        <t t-esc="account['code']"/>
+                                        -
+                                        <t t-esc="account['name']"/>
+                                    </span>
+                                    <div class="" style="display: inline-block;">
+                                        <a type="button" class="dropdown-toggle" data-bs-toggle="dropdown"
+                                           aria-expanded="false">
+                                        </a>
+                                        <div class="dropdown-menu " role="menu">
+                                            <div class="o_foldable_menu o_closed_menu ">
+                                                <div class="form-group ">
+                                                    <div class="show-gl" aria-atomic="true" id="" data-target-input="">
+                                                        <li role="presentation">
+                                                            <a role="menuitem"
+                                                               style="background-color:aqua; font-weight:bold;"
+                                                               t-att-data-account-id="account['id']" class="show-gl">
+                                                                View General Ledger
+                                                            </a>
+                                                        </li>
+                                                    </div>
+                                                </div>
+
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <t t-if="filter['date_from']">
+                                    <t t-if="account['Init_balance']">
+                                        <t t-if="currency[1] == 'before'">
+
+                                            <td class="mon_fld">
+                                                <t t-esc="currency[0]"/>
+                                                <t t-out="Math.round(account['Init_balance']['debit'] * Math.pow(10, currency[3])) / Math.pow(10, currency[3])"/>
+                                                <!--                                                <t t-raw="account['Init_balance']['debit']"/>-->
+                                            </td>
+                                            <td class="mon_fld">
+                                                <t t-esc="currency[0]"/>
+                                                <!--                                                <t t-raw="account['Init_balance']['credit']"/>-->
+                                                <t t-out="Math.round(account['Init_balance']['credit'] * Math.pow(10, currency[3])) / Math.pow(10, currency[3])"/>
+                                            </td>
+                                        </t>
+                                        <t t-else="">
+                                            <td class="mon_fld">
+                                                <!--                                                <t t-raw="account['Init_balance']['debit']"/>-->
+                                                <t t-out="Math.round(account['Init_balance']['debit'] * Math.pow(10, currency[3])) / Math.pow(10, currency[3])"/>
+                                                <t t-esc="currency[0]"/>
+                                            </td>
+                                            <td class="mon_fld">
+                                                <!--                                                <t t-raw="account['Init_balance']['credit']"/>-->
+                                                <t t-out="Math.round(account['Init_balance']['credit'] * Math.pow(10, currency[3])) / Math.pow(10, currency[3])"/>
+                                                <t t-esc="currency[0]"/>
+                                            </td>
+
+
+                                        </t>
+                                    </t>
+                                    <t t-else="">
+                                        <t t-if="currency[1] == 'before'">
+                                            <td class="mon_fld">
+                                                <t t-esc="currency[0]"/>0
+                                            </td>
+                                            <td class="mon_fld">
+                                                <t t-esc="currency[0]"/>0
+                                            </td>
+                                        </t>
+                                        <t t-else="">
+                                            <td class="mon_fld">
+                                                0
+                                                <t t-esc="currency[0]"/>
+                                            </td>
+                                            <td class="mon_fld">
+                                                0
+                                                <t t-esc="currency[0]"/>
+                                            </td>
+                                        </t>
+                                    </t>
+                                </t>
+                                <t t-if="currency[1] == 'before'">
+                                    <td class="mon_fld">
+                                        <t t-esc="currency[0]"/>
+                                        <t t-raw="account['debit']"/>
+                                    </td>
+                                    <td class="mon_fld">
+                                        <t t-esc="currency[0]"/>
+                                        <t t-raw="account['credit']"/>
+                                    </td>
+
+                                </t>
+                                <t t-else="">
+                                    <td class="mon_fld">
+                                        <t t-raw="account['debit']"/>
+                                        <t t-esc="currency[0]"/>
+                                    </td>
+                                    <td class="mon_fld">
+                                        <t t-raw="account['credit']"/>
+                                        <t t-esc="currency[0]"/>
+                                    </td>
+
+                                </t>
+
+                                <!-- Prior year columns -->
+                               <t t-if="filter and filter['comparison_years'] and filter['comparison_years'] > 0">
+                                <t t-foreach="_.range(1, filter['comparison_years'] + 1)" t-as="i">
+                                    <t t-set="debit_key" t-value="'debit_prev_' + i"/>
+                                    <t t-set="credit_key" t-value="'credit_prev_' + i"/>
+                                    <t t-if="currency[1] == 'before'">
+                                        <td class="mon_fld">
+                                            <t t-esc="currency[0]"/>
+                                            <t t-raw="account[debit_key] or 0"/>
+                                        </td>
+                                        <td class="mon_fld">
+                                            <t t-esc="currency[0]"/>
+                                            <t t-raw="account[credit_key] or 0"/>
+                                        </td>
+                                    </t>
+                                    <t t-else="">
+                                        <td class="mon_fld">
+                                            <t t-raw="account[debit_key] or 0"/>
+                                            <t t-esc="currency[0]"/>
+                                        </td>
+                                        <td class="mon_fld">
+                                            <t t-raw="account[credit_key] or 0"/>
+                                            <t t-esc="currency[0]"/>
+                                        </td>
+                                    </t>
+                                </t>
+                            </t>
+                            <!-- Prior month columns -->
+                            <t t-if="filter and filter['comparison_months'] and filter['comparison_months'] > 0">
+                                <t t-foreach="_.range(1, filter['comparison_months'] + 1)" t-as="i">
+                                    <t t-set="debit_month_key" t-value="'debit_month_' + i"/>
+                                    <t t-set="credit_month_key" t-value="'credit_month_' + i"/>
+                                    <t t-if="currency[1] == 'before'">
+                                        <td class="mon_fld">
+                                            <t t-esc="currency[0]"/>
+                                            <t t-raw="account[debit_month_key] or 0"/>
+                                        </td>
+                                        <td class="mon_fld">
+                                            <t t-esc="currency[0]"/>
+                                            <t t-raw="account[credit_month_key] or 0"/>
+                                        </td>
+                                    </t>
+                                    <t t-else="">
+                                        <td class="mon_fld">
+                                            <t t-raw="account[debit_month_key] or 0"/>
+                                            <t t-esc="currency[0]"/>
+                                        </td>
+                                        <td class="mon_fld">
+                                            <t t-raw="account[credit_month_key] or 0"/>
+                                            <t t-esc="currency[0]"/>
+                                        </td>
+                                    </t>
+                                </t>
+                            </t>
+                                <t t-set="common_id" t-value="'a'+account['id']"/>
+                            </tr>
+                        </t>
+                        <td colspan="6" style="" class="">
+                            <strong>Total</strong>
+                        </td>
+                        <t t-if="filter['date_from']">
+
+                            <td class="mon_fld" style="">
+                                <strong></strong>
+                            </td>
+                            <td class="mon_fld" style="">
+                                <strong></strong>
+                            </td>
+                        </t>
+                        <t t-if="currency[1] == 'before'">
+                            <td class="mon_fld" style="">
+                                <strong>
+                                    <t t-esc="currency[0]"/>
+                                    <t t-esc="debit_total"/>
+                                </strong>
+                            </td>
+                            <td class="mon_fld" style="">
+                                <strong>
+                                    <t t-esc="currency[0]"/>
+                                    <t t-esc="credit_total"/>
+                                </strong>
+                            </td>
+                            <t t-if="filter and filter['comparison_years'] and filter['comparison_years'] > 0">
+                                <t t-foreach="_.range(1, filter['comparison_years'] + 1)" t-as="i">
+                                    <td class="mon_fld"><strong><t t-esc="currency[0]"/><t t-esc="debit_prev_totals[i-1]"/></strong></td>
+                                    <td class="mon_fld"><strong><t t-esc="currency[0]"/><t t-esc="credit_prev_totals[i-1]"/></strong></td>
+                                </t>
+                            </t>
+                            <t t-if="filter and filter['comparison_months'] and filter['comparison_months'] > 0">
+                                <t t-foreach="_.range(1, filter['comparison_months'] + 1)" t-as="i">
+                                    <td class="mon_fld"><strong><t t-esc="currency[0]"/><t t-esc="debit_month_totals[i-1]"/></strong></td>
+                                    <td class="mon_fld"><strong><t t-esc="currency[0]"/><t t-esc="credit_month_totals[i-1]"/></strong></td>
+                                </t>
+                            </t>
+
+                        </t>
+                        <t t-else="">
+
+                            <td class="mon_fld" style="">
+                                <strong>
+                                    <!--                                    <t t-raw="Math.round(debit_total * Math.pow(10, 2)) / Math.pow(10, 2)"/>-->
+                                    <t t-esc="debit_total"/>
+                                    <t t-esc="currency[0]"/>
+                                </strong>
+                            </td>
+                            <td class="mon_fld" style="">
+                                <strong>
+                                    <t t-esc="credit_total"/>
+                                    <t t-esc="currency[0]"/>
+                                </strong>
+                            </td>
+                            <t t-if="filter and filter['comparison_years'] and filter['comparison_years'] > 0">
+                                <t t-foreach="_.range(1, filter['comparison_years'] + 1)" t-as="i">
+                                    <td class="mon_fld"><strong><t t-raw="Math.round(debit_prev_totals[i-1] * Math.pow(10, currency[3])) / Math.pow(10, currency[3])"/><t t-esc="currency[0]"/></strong></td>
+                                    <td class="mon_fld"><strong><t t-raw="Math.round(credit_prev_totals[i-1] * Math.pow(10, currency[3])) / Math.pow(10, currency[3])"/><t t-esc="currency[0]"/></strong></td>
+                                </t>
+                            </t>
+                            <t t-if="filter and filter['comparison_months'] and filter['comparison_months'] > 0">
+                                <t t-foreach="_.range(1, filter['comparison_months'] + 1)" t-as="i">
+                                    <td class="mon_fld"><strong><t t-raw="Math.round(debit_month_totals[i-1] * Math.pow(10, currency[3])) / Math.pow(10, currency[3])"/><t t-esc="currency[0]"/></strong></td>
+                                    <td class="mon_fld"><strong><t t-raw="Math.round(credit_month_totals[i-1] * Math.pow(10, currency[3])) / Math.pow(10, currency[3])"/><t t-esc="currency[0]"/></strong></td>
+                                </t>
+                            </t>
+
+                        </t>
+                    </tbody>
+
+                </table>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="TrialFilterView">
+        <div class="row" style="margin-right: 10px; margin-left: 10px;">
+            <div class="sub_container_left" style="width:70%;">
+                <div class="report_print">
+                    <button type="button" class="btn btn-primary" id="pdf"
+                            style="position: relative;height:30px;color:white;background-color: #00A0AD;border-color: #00A0AD; padding:3px;">
+                        Print (PDF)
+                    </button>
+                    <button type="button" class="btn btn-primary" id="xlsx"
+                            style="position: relative;height:30px;color:white;background-color: #00A0AD;border-color: #00A0AD; padding:3px;">
+                        Export (XLSX)
+                    </button>
+                </div>
+            </div>
+            <br></br>
+                <div class="sub_container_right row"
+                     style="width:30%;height:3%;top:0px;position: relative; display:flex; gap:15px;">
+
+                    <!-- DATE RANGE DROPDOWN -->
+                    <div class="time_range">
+                        <a type="button" class="dropdown-toggle" data-bs-toggle="dropdown">
+                            <span class="fa fa-calendar"></span>
+                            Date Range
+                        </a>
+
+                        <div class="dropdown-menu p-3" role="menu" style="min-width:320px;">
+                            <div class="form-group">
+                                <label for="date_from">Start Date :</label>
+                                <div class="input-group date" id="date_from" data-target-input="nearest">
+                                    <input type="text" name="date_from" class="form-control datetimepicker-input"
+                                           data-target="#date_from" t-att-name="prefix"/>
+                                    <div class="input-group-append" data-target="#date_from"
+                                         data-bs-toggle="datetimepicker">
+                                        <span class="input-group-text"><span class="fa fa-calendar"></span></span>
+                                    </div>
+                                </div>
+
+                                <label class="mt-2" for="date_to">End Date :</label>
+                                <div class="input-group date" id="date_to" data-target-input="nearest">
+                                    <input type="text" name="date_to" class="form-control datetimepicker-input"
+                                           data-target="#date_to" t-att-name="prefix"/>
+                                    <div class="input-group-append" data-target="#date_to"
+                                         data-bs-toggle="datetimepicker">
+                                        <span class="input-group-text"><span class="fa fa-calendar"></span></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- COMPARISON DROPDOWN (SEPARATE) -->
+                    <div class="time_range">
+                        <a type="button" class="dropdown-toggle" data-bs-toggle="dropdown">
+                            <span class="fa fa-exchange"></span>
+                            Compare
+                        </a>
+
+                        <div class="dropdown-menu p-3" role="menu" style="min-width:280px;">
+                            <div class="form-group mb-3">
+                                <label for="comparison_years">Compare Prior Years:</label>
+                                <input type="number" class="form-control" id="comparison_years" name="comparison_years" min="0" max="10" t-att-value="filter and filter['comparison_years'] or 0"/>
+                            </div>
+                            <div class="form-group">
+                                <label for="comparison_months">Compare Prior Months:</label>
+                                <input type="number" class="form-control" id="comparison_months" name="comparison_months" min="0" max="12" t-att-value="filter and filter['comparison_months'] or 0"/>
+                            </div>
+                        </div>
+                    </div>
+
+<!--</div>-->
+
+
+                <div class="journals_filter" style="">
+                    <a type="button" class="dropdown-toggle" data-bs-toggle="dropdown">
+                        <span class="fa fa-book"></span>
+                        Journals:
+                    </a>
+                    <select class="dropdown-menu  journals" name="states[]" multiple="multiple">
+                        <div role="separator" class="dropdown-divider"></div>
+                        <t t-foreach="filter_data.journals_list" t-as="journal">
+
+                            <t t-if="journal[0]=='divider'">
+                                <div role="separator" class="dropdown-divider"/>
+
+                                <option disabled="disabled" role="menuitem" t-attf-value="{{journal[0]}}">
+                                    <t t-esc="journal[1]"/>
+                                </option>
+                                <div role="separator" class="dropdown-divider"/>
+                            </t>
+
+
+                            <t t-else="">
+                                <option t-attf-value="{{journal[0]}}">
+                                    <t t-esc="journal[1]"/>
+                                </option>
+                            </t>
+
+                        </t>
+                    </select>
+                    <span id="journal_res"></span>
+                </div>
+                <div class="search-Target-move" style="">
+                    <a type="button" class="dropdown-toggle" data-bs-toggle="dropdown">
+                        <span class="fa fa-filter"></span>
+                        Target Move:
+                    </a>
+                    <select id="entries" class="dropdown-menu target_move" name="states[]">
+                        <div role="separator" class="dropdown-divider"></div>
+                        <option value="Posted">Posted Entries</option>
+                        <option value="All">All Entries</option>
+                    </select>
+                    <span id="post_res"></span>
+                </div>
+                <div class="search-display_account" style="">
+                    <a type="button" class="dropdown-toggle" data-bs-toggle="dropdown">
+                        <span class="fa fa-filter"></span>
+                        Display Accounts:
+                    </a>
+                    <select id="display_accounts" class="dropdown-menu display_account" name="states[]">
+                        <div role="separator" class="dropdown-divider"></div>
+                        <option value="movement">With movements</option>
+                        <option value="all">All</option>
+                        <option value="not_zero">With balance is not equal to 0</option>
+                    </select>
+                    <span id="display_account_res"></span>
+                </div>
+                <div style="">
+                    <button type="button" id="apply_filter" class="btn btn-primary"
+                            style="top:0px;height:30px;color:white;background-color: #00A0AD;border-color: #00A0AD;">
+                        Apply
+                    </button>
+
+                </div>
+                <!--                    </div>-->
+
+
+                <!--                </div>-->
+
+            </div>
+        </div>
+    </t>
+
+</templates>
