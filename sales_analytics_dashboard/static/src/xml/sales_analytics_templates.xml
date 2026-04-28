@@ -9,67 +9,82 @@
             <div class="sales-sidebar-overlay" t-if="state.isSidebarOpen" t-on-click="this.toggleSidebar"></div>
             <aside class="sales-sidebar" t-att-class="{'open': state.isSidebarOpen}">
                 <div class="sales-sidebar-header">
-                    <h3>Analytics Filters</h3>
-                    <button class="sales-sidebar-close" t-on-click="this.toggleSidebar">×</button>
+                    <div class="sales-sidebar-title">
+                        <i class="fa fa-sliders-h"></i>
+                        <h3>Filters</h3>
+                    </div>
+                    <button class="sales-sidebar-close" t-on-click="this.toggleSidebar">
+                        <i class="fa fa-times"></i>
+                    </button>
                 </div>
                 <div class="sales-sidebar-content">
-                    <div class="sales-sidebar-section mobile-only">
-                        <label>Search</label>
-                        <div class="sales-header-search">
+                    <div class="sales-sidebar-section">
+                        <div class="sales-section-label">Search Data</div>
+                        <div class="sales-sidebar-search">
                             <i class="fa fa-search"></i>
                             <input type="text" 
-                                   placeholder="Search analytics..."
+                                   placeholder="Type to search..."
                                    t-model="this.state.searchText"
                                    t-on-input="(e) => this.search(e.target.value)"/>
                         </div>
                     </div>
+
                     <div class="sales-sidebar-section">
-                        <label>Date Range</label>
-                        <div class="sales-date-range">
-                            <input type="date" name="date_from_sidebar" 
-                                   t-att-value="state.dateFrom"
-                                   class="sales-input"
-                                   t-on-input="(e) => this.state.dateFrom = e.target.value"/>
-                            <span>to</span>
-                            <input type="date" name="date_to_sidebar" 
-                                   t-att-value="state.dateTo"
-                                   class="sales-input"
-                                   t-on-input="(e) => this.state.dateTo = e.target.value"/>
+                        <div class="sales-section-label">Period</div>
+                        <div class="sales-sidebar-dates">
+                            <div class="sales-date-input-group">
+                                <i class="fa fa-calendar-alt"></i>
+                                <input type="date" name="date_from_sidebar" 
+                                       t-att-value="state.dateFrom"
+                                       t-on-input="(e) => this.state.dateFrom = e.target.value"/>
+                            </div>
+                            <div class="sales-date-sep">to</div>
+                            <div class="sales-date-input-group">
+                                <i class="fa fa-calendar-check"></i>
+                                <input type="date" name="date_to_sidebar" 
+                                       t-att-value="state.dateTo"
+                                       t-on-input="(e) => this.state.dateTo = e.target.value"/>
+                            </div>
                         </div>
                     </div>
+
                     <div class="sales-sidebar-section">
-                        <label>Group By</label>
-                        <div class="sales-groupby-container">
-                            <t t-foreach="state.activeGroups" t-as="group" t-key="group">
-                                <span class="sales-badge">
-                                    <t t-esc="getGroupLabel(group)"/>
-                                    <button class="sales-badge-remove" 
-                                            t-on-click="() => this.removeGroup(group)">
-                                        ×
-                                    </button>
-                                </span>
-                            </t>
-                            <div class="sales-dropdown">
-                                <button class="sales-add-btn" t-on-click="this.toggleDropdown">
-                                    + Add Group
+                        <div class="sales-section-label">Group Analytics By</div>
+                        <div class="sales-sidebar-groupby">
+                            <div class="sales-dropdown full-width">
+                                <button class="sales-sidebar-dropdown-btn" t-on-click="this.toggleDropdown" t-att-class="{'has-active': state.activeGroups.length > 0}">
+                                    <i class="fa fa-layer-group"></i>
+                                    <span>
+                                        <t t-if="state.activeGroups.length > 0">
+                                            Grouped by <t t-esc="state.activeGroups.length"/> categories
+                                        </t>
+                                        <t t-else="">Select Grouping</t>
+                                    </span>
+                                    <i class="fa fa-chevron-down ms-auto"></i>
                                 </button>
                                 <div class="sales-dropdown-menu">
-                                    <div class="sales-dropdown-item" t-on-click="() => this.addGroup('customer')">👥 Customer</div>
-                                    <div class="sales-dropdown-item" t-on-click="() => this.addGroup('product')">📦 Product</div>
-                                    <div class="sales-dropdown-item" t-on-click="() => this.addGroup('salesperson')">👤 Salesperson</div>
-                                    <div class="sales-dropdown-item" t-on-click="() => this.addGroup('team')">🏷️ Team</div>
-                                    <div class="sales-dropdown-item" t-on-click="() => this.addGroup('category')">🏷️ Category</div>
+                                    <t t-set="groups" t-value="[['customer', '👥 Customer'], ['product', '📦 Product'], ['salesperson', '👤 Salesperson'], ['team', '🏷️ Team'], ['category', '🏷️ Category']]"/>
+                                    <t t-foreach="groups" t-as="group" t-key="group[0]">
+                                        <div class="sales-dropdown-item" 
+                                             t-att-class="{'active': state.activeGroups.includes(group[0])}"
+                                             t-on-click="() => state.activeGroups.includes(group[0]) ? this.removeGroup(group[0]) : this.addGroup(group[0])">
+                                            <span class="sales-item-label" t-esc="group[1]"/>
+                                            <i t-if="state.activeGroups.includes(group[0])" class="fa fa-times-circle sales-item-remove"></i>
+                                        </div>
+                                    </t>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="sales-sidebar-actions">
-                        <button class="sales-btn sales-btn-primary" t-on-click="() => { this.applyFilters(); this.toggleSidebar(); }">
-                            Apply Filters
+
+                    <div class="sales-sidebar-footer">
+                        <button class="sales-btn-sidebar-apply" t-on-click="() => { this.applyFilters(); this.toggleSidebar(); }">
+                            <i class="fa fa-check"></i>
+                            <span>Apply Changes</span>
                         </button>
-                        <button class="sales-btn sales-btn-secondary" 
-                                t-on-click="() => { this.clearFilters(); this.toggleSidebar(); }">
-                            Clear Filters
+                        <button class="sales-btn-sidebar-clear" t-on-click="() => { this.clearFilters(); this.toggleSidebar(); }">
+                            <i class="fa fa-redo"></i>
+                            <span>Reset All</span>
                         </button>
                     </div>
                 </div>
