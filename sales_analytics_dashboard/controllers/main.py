@@ -18,47 +18,57 @@ except ImportError:
 
 class SalesAnalyticsController(http.Controller):
 
-    def _get_advanced_domain(self, date_from=None, date_to=None, customer_ids=None, product_ids=None, team_ids=None, company_ids=None):
-        """Build advanced domain with multiple filter options"""
-        domain = [('state', 'in', ['sale', 'done'])]
-        
+    def _get_analytics_data_sql(self, date_from=None, date_to=None, company_ids=None, groupby=None):
+        """Fetch analytics data using optimized SQL query"""
+        query = """
+            SELECT 
+                so.id as order_id,
+                so.name as order_name,
+                so.date_order,
+                rp.name as customer,
+                so.partner_id as customer_id,
+                pt.name as product,
+                pp.id as product_id,
+                ru_partner.name as salesperson,
+                so.user_id as salesperson_id,
+                st.name as team,
+                sol.product_uom_qty as qty,
+                sol.price_unit,
+                sol.price_subtotal as subtotal,
+                pc.name as category
+            FROM sale_order_line sol
+            JOIN sale_order so ON sol.order_id = so.id
+            JOIN res_partner rp ON so.partner_id = rp.id
+            JOIN product_product pp ON sol.product_id = pp.id
+            JOIN product_template pt ON pp.product_tmpl_id = pt.id
+            LEFT JOIN res_users ru ON so.user_id = ru.id
+            LEFT JOIN res_partner ru_partner ON ru.partner_id = ru_partner.id
+            LEFT JOIN crm_team st ON so.team_id = st.id
+            LEFT JOIN product_category pc ON pt.categ_id = pc.id
+            WHERE so.state IN ('sale', 'done')
+        """
+        params = []
+
         if date_from:
-            domain.append(('date_order', '>=', date_from))
+            query += " AND so.date_order >= %s"
+            params.append(date_from)
         if date_to:
-            domain.append(('date_order', '<=', date_to))
-        if customer_ids:
-            domain.append(('partner_id', 'in', customer_ids))
-        if product_ids:
-            domain.append(('order_line.product_id', 'in', product_ids))
-        if team_ids:
-            domain.append(('team_id', 'in', team_ids))
+            query += " AND so.date_order <= %s"
+            params.append(date_to)
         if company_ids:
-            domain.append(('company_id', 'in', company_ids))
-            
-        return domain
+            query += " AND so.company_id IN %s"
+            params.append(tuple(company_ids))
 
-    def _calculate_trends(self, orders, period='monthly'):
-        """Calculate sales trends over time"""
-        trends = {}
-        for order in orders:
-            if period == 'monthly':
-                key = order.date_order.strftime('%Y-%m')
-            elif period == 'weekly':
-                key = order.date_order.strftime('%Y-W%W')
-            else:
-                key = order.date_order.strftime('%Y-%m-%d')
-                
-            if key not in trends:
-                trends[key] = {'revenue': 0, 'orders': 0, 'qty': 0}
-                
-            trends[key]['revenue'] += sum(order.order_line.mapped('price_subtotal'))
-            trends[key]['orders'] += 1
-            trends[key]['qty'] += sum(order.order_line.mapped('product_uom_qty'))
-            
-        return dict(sorted(trends.items()))
+        query += " ORDER BY so.date_order DESC"
+        
+        request.env.cr.execute(query, params)
+        results = request.env.cr.dictfetchall()
 
-    def _build_analytics_tree(self, orders, groupby):
-        """Build hierarchical analytics data tree"""
+        # Fetch product costs via ORM (since standard_price is a property field)
+        product_ids = list(set(row['product_id'] for row in results))
+        product_costs = {p['id']: p['standard_price'] for p in request.env['product.product'].sudo().browse(product_ids).read(['standard_price'])}
+
+        # Build analytics tree and KPIs from SQL results
         analytics_data = {}
         all_lines = []
         total_revenue = 0.0
@@ -66,77 +76,101 @@ class SalesAnalyticsController(http.Controller):
         customer_set = set()
         product_set = set()
         order_set = set()
+        total_margin = 0.0
 
-        for order in orders:
-            customer_set.add(order.partner_id.id)
-            order_set.add(order.id)
+        for row in results:
+            cost = product_costs.get(row['product_id'], 0.0)
+            margin = row['subtotal'] - (row['qty'] * cost)
             
-            for line in order.order_line:
-                total_revenue += line.price_subtotal
-                total_qty += line.product_uom_qty
-                
-                line_info = {
-                    'order_id': order.id,
-                    'order_name': order.name,
-                    'date_order': order.date_order.strftime('%Y-%m-%d') if order.date_order else '',
-                    'customer': order.partner_id.name or 'Unknown',
-                    'customer_id': order.partner_id.id,
-                    'product': line.product_id.display_name or 'Unknown',
-                    'product_id': line.product_id.id,
-                    'salesperson': order.user_id.name or 'Unassigned',
-                    'salesperson_id': order.user_id.id,
-                    'team': order.team_id.name if order.team_id else 'General',
-                    'qty': line.product_uom_qty,
-                    'price_unit': line.price_unit,
-                    'subtotal': line.price_subtotal,
-                    'margin': line.price_subtotal - (line.product_uom_qty * line.product_id.standard_price),
-                    'margin_pct': ((line.price_subtotal - (line.product_uom_qty * line.product_id.standard_price)) / line.price_subtotal * 100) if line.price_subtotal > 0 else 0,
-                }
-                all_lines.append(line_info)
-                product_set.add(line.product_id.id)
+            # Normalize translatable fields
+            customer_name = row['customer']
+            if isinstance(customer_name, dict):
+                customer_name = customer_name.get(request.env.lang) or list(customer_name.values())[0] if customer_name else 'Unknown'
+            
+            product_name = row['product']
+            if isinstance(product_name, dict):
+                product_name = product_name.get(request.env.lang) or list(product_name.values())[0] if product_name else 'Unknown'
+            
+            category_name = row['category']
+            if isinstance(category_name, dict):
+                category_name = category_name.get(request.env.lang) or list(category_name.values())[0] if category_name else 'Uncategorized'
+            
+            salesperson_name = row['salesperson']
+            if isinstance(salesperson_name, dict):
+                salesperson_name = salesperson_name.get(request.env.lang) or list(salesperson_name.values())[0] if salesperson_name else 'Unassigned'
+            
+            team_name = row['team']
+            if isinstance(team_name, dict):
+                team_name = team_name.get(request.env.lang) or list(team_name.values())[0] if team_name else 'General'
 
-                if groupby:
-                    active_keys = []
-                    for key in groupby:
-                        if key == 'customer':
-                            active_keys.append(order.partner_id.name or 'Unknown')
-                        elif key == 'product':
-                            active_keys.append(line.product_id.display_name or 'Unknown')
-                        elif key == 'salesperson':
-                            active_keys.append(order.user_id.name or 'Unassigned')
-                        elif key == 'team':
-                            active_keys.append(order.team_id.name if order.team_id else 'General')
-                        elif key == 'category':
-                            active_keys.append(line.product_id.categ_id.name or 'Uncategorized')
-                        else:
-                            active_keys.append('Other')
+            customer_set.add(row['customer_id'])
+            product_set.add(row['product_id'])
+            order_set.add(row['order_id'])
+            total_revenue += row['subtotal']
+            total_qty += row['qty']
+            total_margin += margin
+
+            line_info = {
+                'order_id': row['order_id'],
+                'order_name': row['order_name'],
+                'date_order': row['date_order'].strftime('%Y-%m-%d') if row['date_order'] else '',
+                'customer': customer_name,
+                'customer_id': row['customer_id'],
+                'product': product_name,
+                'product_id': row['product_id'],
+                'salesperson': salesperson_name,
+                'salesperson_id': row['salesperson_id'],
+                'team': team_name,
+                'category': category_name,
+                'qty': row['qty'],
+                'price_unit': row['price_unit'],
+                'subtotal': row['subtotal'],
+                'margin': margin,
+                'margin_pct': (margin / row['subtotal'] * 100) if row['subtotal'] > 0 else 0,
+            }
+            all_lines.append(line_info)
+
+            if groupby:
+                active_keys = []
+                for key in groupby:
+                    # Map the groupby key to the normalized name
+                    if key == 'customer': key_val = customer_name
+                    elif key == 'product': key_val = product_name
+                    elif key == 'category': key_val = category_name
+                    elif key == 'salesperson': key_val = salesperson_name
+                    elif key == 'team': key_val = team_name
+                    else: key_val = row.get(key) or 'Unknown'
                     
-                    current_level = analytics_data
-                    for i, key_val in enumerate(active_keys):
-                        if key_val not in current_level:
-                            current_level[key_val] = {
-                                'total': 0.0, 
-                                'qty': 0.0, 
-                                'margin': 0.0,
-                                'children': {}, 
-                                'lines': [],
-                                'orders': set()
-                            }
-                        current_level[key_val]['total'] += line.price_subtotal
-                        current_level[key_val]['qty'] += line.product_uom_qty
-                        current_level[key_val]['margin'] += line_info['margin']
-                        current_level[key_val]['orders'].add(order.id)
-                        
-                        if i == len(active_keys) - 1:
-                            current_level[key_val]['lines'].append(line_info)
-                        else:
-                            current_level = current_level[key_val]['children']
+                    if isinstance(key_val, dict):
+                        key_val = key_val.get(request.env.lang) or list(key_val.values())[0] if key_val else 'Unknown'
+                    active_keys.append(key_val)
+                
+                current_level = analytics_data
+                for i, key_val in enumerate(active_keys):
+                    if key_val not in current_level:
+                        current_level[key_val] = {
+                            'total': 0.0, 
+                            'qty': 0.0, 
+                            'margin': 0.0,
+                            'children': {}, 
+                            'lines': [],
+                            'order_ids': set()
+                        }
+                    current_level[key_val]['total'] += row['subtotal']
+                    current_level[key_val]['qty'] += row['qty']
+                    current_level[key_val]['margin'] += margin
+                    current_level[key_val]['order_ids'].add(row['order_id'])
+                    
+                    if i == len(active_keys) - 1:
+                        current_level[key_val]['lines'].append(line_info)
+                    else:
+                        current_level = current_level[key_val]['children']
 
         # Convert order sets to counts
         def _convert_order_sets(node):
-            if 'orders' in node:
-                node['order_count'] = len(node['orders'])
-                del node['orders']
+            if 'order_ids' in node:
+                node['order_count'] = len(node['order_ids'])
+                del node['order_ids']
             for child in node.get('children', {}).values():
                 _convert_order_sets(child)
         
@@ -149,50 +183,77 @@ class SalesAnalyticsController(http.Controller):
             'total_products': len(product_set),
             'total_qty': total_qty,
             'avg_order_value': total_revenue / len(order_set) if order_set else 0,
-            'total_margin': sum(l['margin'] for l in all_lines),
+            'total_margin': total_margin,
         }
         
         return analytics_data, all_lines, kpi
 
+    def _calculate_trends_sql(self, results, period='monthly'):
+        """Calculate trends from SQL result set"""
+        trends = {}
+        for row in results:
+            dt = row['date_order']
+            if not dt: continue
+            
+            if period == 'monthly':
+                key = dt.strftime('%Y-%m')
+            elif period == 'weekly':
+                key = dt.strftime('%Y-W%W')
+            else:
+                key = dt.strftime('%Y-%m-%d')
+                
+            if key not in trends:
+                trends[key] = {'revenue': 0, 'orders': 0, 'qty': 0}
+                
+            trends[key]['revenue'] += row['subtotal']
+            trends[key]['orders'] += 1 # This is per line, might need adjustment for unique orders
+            trends[key]['qty'] += row['qty']
+            
+        return dict(sorted(trends.items()))
+
     @http.route('/sales_analytics/data', type='json', auth='user', methods=['POST'])
     def get_analytics_data(self, groupby=None, date_from=None, date_to=None, 
-                          customer_ids=None, product_ids=None, team_ids=None, company_ids=None, **kw):
-        """Get analytics data with advanced filtering"""
+                          company_ids=None, **kw):
+        """Get analytics data with optimized SQL filtering"""
         if groupby is None:
             groupby = ['customer']
         
-        # Parse JSON arrays
-        if isinstance(customer_ids, str):
-            try:
-                customer_ids = json.loads(customer_ids)
-            except:
-                customer_ids = None
-        if isinstance(product_ids, str):
-            try:
-                product_ids = json.loads(product_ids)
-            except:
-                product_ids = None
-        if isinstance(team_ids, str):
-            try:
-                team_ids = json.loads(team_ids)
-            except:
-                team_ids = None
         if isinstance(company_ids, str):
             try:
                 company_ids = json.loads(company_ids)
             except:
                 company_ids = None
 
-        domain = self._get_advanced_domain(date_from, date_to, customer_ids, product_ids, team_ids, company_ids)
-        orders = request.env['sale.order'].sudo().search(domain, order='date_order desc')
+        # Fetch using optimized SQL
+        analytics_data, all_lines, kpi = self._get_analytics_data_sql(
+            date_from=date_from, 
+            date_to=date_to, 
+            company_ids=company_ids, 
+            groupby=groupby
+        )
         
-        analytics_data, all_lines, kpi = self._build_analytics_tree(orders, groupby)
-        trends = self._calculate_trends(orders, 'monthly')
+        # Calculate trends from same dataset
+        # To get accurate order count for trends, we'd need unique order IDs per period
+        trends = {}
+        for row in all_lines: # all_lines is processed from SQL results
+            dt_str = row['date_order']
+            if not dt_str: continue
+            key = dt_str[:7] # YYYY-MM
+            if key not in trends:
+                trends[key] = {'revenue': 0, 'orders': set(), 'qty': 0}
+            trends[key]['revenue'] += row['subtotal']
+            trends[key]['orders'].add(row['order_id'])
+            trends[key]['qty'] += row['qty']
         
+        for k in trends:
+            trends[k]['orders'] = len(trends[k]['orders'])
+
         # Top customers by revenue
         customer_totals = {}
         for line in all_lines:
             c = line['customer']
+            if isinstance(c, dict):
+                c = c.get(request.env.lang) or list(c.values())[0] if c else 'Unknown'
             customer_totals[c] = customer_totals.get(c, 0) + line['subtotal']
         top_customers = sorted(customer_totals.items(), key=lambda x: x[1], reverse=True)[:5]
         
@@ -200,24 +261,21 @@ class SalesAnalyticsController(http.Controller):
         product_totals = {}
         for line in all_lines:
             p = line['product']
+            if isinstance(p, dict):
+                p = p.get(request.env.lang) or list(p.values())[0] if p else 'Unknown'
             product_totals[p] = product_totals.get(p, 0) + line['subtotal']
         top_products = sorted(product_totals.items(), key=lambda x: x[1], reverse=True)[:5]
         
         # Sales by category
         category_totals = {}
         for line in all_lines:
-            cat = request.env['product.product'].browse(line['product_id']).categ_id.name
+            cat = line.get('category') or 'Uncategorized'
+            if isinstance(cat, dict):
+                cat = cat.get(request.env.lang) or list(cat.values())[0] if cat else 'Uncategorized'
             category_totals[cat] = category_totals.get(cat, 0) + line['subtotal']
         top_categories = sorted(category_totals.items(), key=lambda x: x[1], reverse=True)[:5]
 
-        if date_from and date_to:
-            period_label = f"{date_from} to {date_to}"
-        elif date_from:
-            period_label = f"From {date_from}"
-        elif date_to:
-            period_label = f"To {date_to}"
-        else:
-            period_label = "All Time"
+        period_label = f"{date_from or 'Start'} to {date_to or 'Now'}"
 
         return {
             'analytics_data': analytics_data,
@@ -235,19 +293,21 @@ class SalesAnalyticsController(http.Controller):
 
     @http.route('/sales_analytics/export_excel', type='http', auth='user', methods=['GET', 'POST'])
     def export_excel_advanced(self, groupby=None, date_from=None, date_to=None, company_ids=None, **kw):
-        """Export analytics to Excel with hierarchical grouping"""
+        """Export analytics to Excel using optimized data fetching"""
         groupby_list = json.loads(groupby) if groupby else []
         
-        # Parse company_ids if passed as string
         if isinstance(company_ids, str):
             try:
                 company_ids = json.loads(company_ids)
             except:
                 company_ids = None
 
-        domain = self._get_advanced_domain(date_from, date_to, company_ids=company_ids)
-        orders = request.env['sale.order'].sudo().search(domain, order='date_order desc')
-        analytics_data, all_lines, kpi = self._build_analytics_tree(orders, groupby_list)
+        analytics_data, all_lines, kpi = self._get_analytics_data_sql(
+            date_from=date_from, 
+            date_to=date_to, 
+            company_ids=company_ids, 
+            groupby=groupby_list
+        )
 
         if not xlsxwriter:
             return request.make_response('xlsxwriter not installed', status=500)
