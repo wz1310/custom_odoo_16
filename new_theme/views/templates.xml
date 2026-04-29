@@ -1,0 +1,396 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <template id="dynamic_theme_styles" inherit_id="web.layout">
+            <xpath expr="//head" position="inside">
+            <t t-set="primary_color" t-value="request.env['ir.config_parameter'].sudo().get_param('new_theme.primary_color', '#875A7B')"/>
+            <t t-set="navbar_color" t-value="request.env['ir.config_parameter'].sudo().get_param('new_theme.navbar_color', '#714B67')"/>
+            <t t-set="menu_style" t-value="request.env['ir.config_parameter'].sudo().get_param('new_theme.menu_style', 'default')"/>
+            <t t-set="navbar_autohide" t-value="request.env['ir.config_parameter'].sudo().get_param('new_theme.navbar_autohide', False)"/>
+            
+            <style type="text/css">
+                :root {
+                    --o-brand-primary: <t t-esc="primary_color"/> !important;
+                    --o-brand-odoo: <t t-esc="primary_color"/> !important;
+                    --o-navbar-background-color: <t t-esc="navbar_color"/> !important;
+                }
+                
+                .o_main_navbar {
+                    background-color: <t t-esc="navbar_color"/> !important;
+                }
+                
+                <t t-if="navbar_autohide">
+                    /* Auto-hide Navbar - Desktop Only (min-width: 768px) */
+                    @media (min-width: 768px) {
+                        .o_main_navbar {
+                            position: relative !important;
+                            z-index: 1000 !important;
+                            transition: margin-top 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+                            overflow: visible !important;
+                            margin-top: -46px !important;
+                        }
+
+                        .o_main_navbar:hover {
+                            margin-top: 0 !important;
+                        }
+
+                        .o_main_navbar::after {
+                            content: "" !important;
+                            position: absolute !important;
+                            top: 46px !important; 
+                            left: 0 !important;
+                            width: 100% !important;
+                            height: 10px !important;
+                            background: transparent !important;
+                            z-index: 1001 !important;
+                        }
+
+                        .o_main_navbar:hover::after {
+                            display: none !important;
+                        }
+                    }
+                </t>
+                
+                .btn-primary {
+                    background-color: <t t-esc="primary_color"/> !important;
+                    border-color: <t t-esc="primary_color"/> !important;
+                }
+                
+                .btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+                    background-color: <t t-esc="primary_color"/> !important;
+                    filter: brightness(0.9);
+                }
+                
+                /* Modern Centered Loading Spinner */
+                .o_loading {
+                    position: fixed !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    width: 100vw !important;
+                    height: 100vh !important;
+                    background: rgba(255, 255, 255, 0.1) !important;
+                    backdrop-filter: blur(10px) !important;
+                    -webkit-backdrop-filter: blur(10px) !important;
+                    z-index: 10000 !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    color: transparent !important; /* Hide text */
+                    border: none !important;
+                    padding: 0 !important;
+                }
+
+                .o_loading::after {
+                    content: "" !important;
+                    width: 60px !important;
+                    height: 60px !important;
+                    border: 6px solid rgba(255, 255, 255, 0.3) !important;
+                    border-top: 6px solid <t t-esc="primary_color"/> !important;
+                    border-radius: 50% !important;
+                    animation: theme_spinner 1s linear infinite !important;
+                    box-shadow: 0 0 20px rgba(0,0,0,0.1) !important;
+                }
+
+                @keyframes theme_spinner {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+
+                /* Hide close button by default */
+                .o_navbar_apps_menu .o_apps_menu_close {
+                    display: none !important;
+                }
+
+                <t t-if="menu_style == 'fullscreen_rolling'">
+                    /* High-End Fullscreen Menu - Professional and Modern */
+                    /* Full-screen Background Container */
+                    /* Full-screen Background Container */
+                    .o_navbar_apps_menu .dropdown-menu.show,
+                    .o_navbar_apps_menu .dropdown-menu-custom {
+                        display: grid !important;
+                        justify-content: center !important;
+                        align-content: flex-start !important;
+                        position: fixed !important;
+                        top: 0 !important;
+                        left: 0 !important;
+                        right: 0 !important;
+                        bottom: 0 !important;
+                        width: 100vw !important;
+                        height: 100vh !important;
+                        min-width: 100vw !important;
+                        min-height: 100vh !important;
+                        max-width: none !important;
+                        max-height: none !important;
+                        margin: 0 !important;
+                        border: none !important;
+                        border-radius: 0 !important;
+                        z-index: 9999 !important; /* Maximum priority */
+                        background: radial-gradient(circle at top, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.1) 100%) !important;
+                        backdrop-filter: blur(40px) saturate(150%) !important;
+                        -webkit-backdrop-filter: blur(40px) saturate(150%) !important;
+                        animation: slideDownBounce 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+                        padding: 100px 20px 50px !important;
+                        overflow-y: auto !important;
+                        gap: 10px 0 !important;
+                    }
+
+                    /* Desktop Specific: 5 Grid Layout for better spacing */
+                    @media (min-width: 768px) {
+                        .o_navbar_apps_menu .dropdown-menu-custom {
+                            grid-template-columns: repeat(5, 120px) !important; /* 5 columns of 120px = 600px total */
+                        }
+
+                        .o_navbar_apps_menu .dropdown-menu-custom .search-container {
+                            grid-column: span 5 !important;
+                            width: 600px !important;
+                        }
+
+                        .o_navbar_apps_menu .dropdown-menu .dropdown-item,
+                        .o_navbar_apps_menu .dropdown-menu-custom .dropdown-item,
+                        .o_navbar_apps_menu .dropdown-menu-custom .o_app {
+                            width: 110px !important;
+                            height: 130px !important;
+                            margin: 5px !important;
+                        }
+                    }
+
+                    @keyframes slideDownBounce {
+                        0% { transform: translateY(-100%); opacity: 0; }
+                        70% { transform: translateY(0); opacity: 1; }
+                        85% { transform: translateY(-15px); }
+                        100% { transform: translateY(0); }
+                    }
+
+                    /* Search Bar Base Styling */
+                    .o_navbar_apps_menu .dropdown-menu-custom .search-container {
+                        justify-self: center !important;
+                        margin-bottom: 30px !important;
+                        display: flex !important;
+                        flex-direction: column !important;
+                        align-items: center !important;
+                    }
+
+                    /* Base App Items Styling */
+                    .o_navbar_apps_menu .dropdown-menu .dropdown-item,
+                    .o_navbar_apps_menu .dropdown-menu-custom .dropdown-item,
+                    .o_navbar_apps_menu .dropdown-menu-custom .o_app {
+                        display: flex !important;
+                        flex-direction: column !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        background: rgba(255, 255, 255, 0.15) !important;
+                        border-radius: 16px !important;
+                        transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1) !important;
+                        border: 1px solid rgba(255, 255, 255, 0.4) !important;
+                        backdrop-filter: blur(10px) !important;
+                        box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important;
+                        animation: itemFadeIn 0.6s ease-out backwards !important;
+                    }
+
+                    @keyframes itemFadeIn {
+                        from { opacity: 0; transform: translateY(30px); }
+                        to { opacity: 1; transform: translateY(0); }
+                    }
+
+                    /* Interactive Hover States */
+                    .o_navbar_apps_menu .dropdown-menu .dropdown-item:hover,
+                    .o_navbar_apps_menu .dropdown-menu-custom .o_app:hover {
+                        background: rgba(255, 255, 255, 0.3) !important;
+                        transform: translateY(-8px) scale(1.06) !important;
+                        box-shadow: 0 15px 30px rgba(0,0,0,0.1) !important;
+                        border-color: rgba(255, 255, 255, 0.8) !important;
+                    }
+
+                    .o_navbar_apps_menu .dropdown-menu .dropdown-item img,
+                    .o_navbar_apps_menu .dropdown-menu-custom .o_app img,
+                    .o_navbar_apps_menu .dropdown-menu-custom .o-app-icon {
+                        width: 48px !important; /* Smaller icons for 6-grid */
+                        height: 48px !important;
+                        max-width: 48px !important;
+                        margin-bottom: 8px !important;
+                        filter: drop-shadow(0 10px 15px rgba(0,0,0,0.15)) !important;
+                        transition: all 0.5s ease !important;
+                    }
+
+                    .o_navbar_apps_menu .dropdown-menu .dropdown-item span,
+                    .o_navbar_apps_menu .dropdown-menu-custom .o_app div,
+                    .o_navbar_apps_menu .dropdown-menu-custom .o_app span {
+                        font-size: 11px !important; /* Smaller font for 6-grid */
+                        font-weight: 600 !important;
+                        color: #111 !important;
+                        text-align: center !important;
+                        line-height: 1.2 !important;
+                        text-shadow: 0 1px 1px rgba(255,255,255,0.5) !important;
+                    }
+
+                    /* Modern Search Bar - Water Style */
+                    .o_navbar_apps_menu .dropdown-menu-custom .search-container {
+                        flex: 0 0 100% !important;
+                        display: flex !important;
+                        flex-direction: column !important;
+                        align-items: center !important;
+                        justify-content: flex-start !important;
+                        order: -1 !important;
+                        margin: 0 0 30px 0 !important;
+                        padding: 0 !important;
+                        animation: itemFadeIn 0.8s ease-out 0.1s backwards !important;
+                        z-index: 2600 !important;
+                    }
+
+                    .o_navbar_apps_menu .dropdown-menu-custom .search-input {
+                        width: 100% !important;
+                        max-width: 600px !important; /* Back to original width */
+                        background: rgba(255, 255, 255, 0.25) !important;
+                        border: 1px solid rgba(255, 255, 255, 0.5) !important;
+                        border-radius: 20px !important;
+                        padding: 12px 24px !important;
+                        box-shadow: 0 10px 30px rgba(0,0,0,0.05) !important;
+                        transition: all 0.3s ease !important;
+                        display: center !important;
+                        align-items: center !important;
+                        backdrop-filter: blur(10px) !important;
+                    }
+
+                    .o_navbar_apps_menu .dropdown-menu-custom .search-results {
+                        width: 100% !important;
+                        max-width: 600px !important;
+                        background: rgba(255, 255, 255, 0.4) !important;
+                        border-radius: 0 0 20px 20px !important;
+                        margin-top: -10px !important;
+                        padding: 20px !important;
+                        box-shadow: 0 20px 40px rgba(0,0,0,0.1) !important;
+                        max-height: 50vh !important;
+                        overflow-y: auto !important;
+                        border: 1px solid rgba(255, 255, 255, 0.5) !important;
+                        border-top: none !important;
+                        z-index: 2601 !important;
+                        backdrop-filter: blur(20px) !important;
+                    }
+
+                    .o_navbar_apps_menu .dropdown-menu-custom .search-result {
+                        display: flex !important;
+                        align-items: center !important;
+                        padding: 12px 20px !important;
+                        color: #111 !important;
+                        font-size: 16px !important;
+                        border-radius: 12px !important;
+                        transition: all 0.2s !important;
+                        text-decoration: none !important;
+                        margin-bottom: 5px !important;
+                        background-color: transparent !important;
+                    }
+
+                    .o_navbar_apps_menu .dropdown-menu-custom .search-result:hover,
+                    .o_navbar_apps_menu .dropdown-menu-custom .search-result.highlight {
+                        background-color: rgba(255,255,255,0.4) !important;
+                        color: <t t-esc="primary_color"/> !important;
+                        padding-left: 30px !important;
+                    }
+
+                    .o_navbar_apps_menu .dropdown-menu-custom .search-input:focus-within {
+                        border-color: rgba(255, 255, 255, 0.8) !important;
+                        box-shadow: 0 15px 35px rgba(0,0,0,0.1) !important;
+                    }
+
+                    .o_navbar_apps_menu .dropdown-menu-custom .search-input .search-icon {
+                        color: <t t-esc="primary_color"/> !important;
+                        font-size: 20px !important;
+                        margin-right: 15px !important;
+                    }
+
+                    .o_navbar_apps_menu .dropdown-menu-custom .search-input .form-control {
+                        color: #111 !important;
+                        font-size: 18px !important;
+                        background: transparent !important;
+                        border: none !important;
+                        box-shadow: none !important;
+                    }
+
+                    /* Floating Close Button - Functional */
+                    .o_navbar_apps_menu .o_apps_menu_close {
+                        position: fixed !important;
+                        top: 40px !important;
+                        left: 50px !important; /* Moved to left */
+                        width: 50px !important;
+                        height: 50px !important;
+                        background: rgba(255, 255, 255, 0.4) !important;
+                        border: 1px solid rgba(255, 255, 255, 0.6) !important;
+                        backdrop-filter: blur(10px) !important;
+                        border-radius: 50% !important;
+                        display: flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        font-size: 20px !important;
+                        color: #333 !important;
+                        box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+                        cursor: pointer !important;
+                        transition: all 0.3s !important;
+                        z-index: 2700 !important;
+                    }
+
+                    .o_navbar_apps_menu .o_apps_menu_close:hover {
+                        transform: rotate(90deg) !important;
+                        color: #ff4d4d !important;
+                        background: rgba(255, 255, 255, 0.8) !important;
+                    }
+
+                    /* Responsive Mobile View - 4 items per row */
+                    @media (max-width: 767px) {
+                        .o_navbar_apps_menu .dropdown-menu.show,
+                        .o_navbar_apps_menu .dropdown-menu-custom {
+                            padding: 80px 10px 40px !important;
+                            grid-template-columns: repeat(4, 1fr) !important;
+                            gap: 10px !important;
+                        }
+
+                        .o_navbar_apps_menu .dropdown-menu-custom .search-container {
+                            grid-column: span 4 !important;
+                            width: 100% !important;
+                            margin-bottom: 25px !important;
+                        }
+
+                        .o_navbar_apps_menu .dropdown-menu .dropdown-item,
+                        .o_navbar_apps_menu .dropdown-menu-custom .dropdown-item,
+                        .o_navbar_apps_menu .dropdown-menu-custom .o_app {
+                            width: 100% !important; /* Grid cell handles the width */
+                            min-width: 75px !important;
+                            margin: 0 !important;
+                            padding: 15px 5px !important;
+                            min-height: 110px !important;
+                            border-radius: 16px !important;
+                        }
+
+                        .o_navbar_apps_menu .dropdown-menu .dropdown-item img,
+                        .o_navbar_apps_menu .dropdown-menu-custom .o_app img,
+                        .o_navbar_apps_menu .dropdown-menu-custom .o-app-icon {
+                            width: 42px !important;
+                            height: 42px !important;
+                            margin-bottom: 8px !important;
+                        }
+
+                        .o_navbar_apps_menu .dropdown-menu .dropdown-item span,
+                        .o_navbar_apps_menu .dropdown-menu-custom .o_app div,
+                        .o_navbar_apps_menu .dropdown-menu-custom .o_app span {
+                            font-size: 10px !important;
+                            line-height: 1.1 !important;
+                        }
+
+                        .o_navbar_apps_menu .o_apps_menu_close {
+                            top: 20px !important;
+                            left: 20px !important; 
+                            width: 40px !important;
+                            height: 40px !important;
+                        }
+
+                        .o_navbar_apps_menu .dropdown-menu-custom .search-input {
+                            padding: 10px 20px !important;
+                            max-width: 100% !important;
+                        }
+                    }
+                </t>
+            </style>
+        </xpath>
+    </template>
+    </data>
+</odoo>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-inherit="web_responsive.AppsMenu" t-inherit-mode="extension" owl="1">
+        <xpath expr="//div[hasclass('dropdown-menu-custom')]" position="inside">
+            <div class="o_apps_menu_close" t-on-click.stop="() => this.setOpenState(false)">
+                <i class="fa fa-times"/>
+            </div>
+        </xpath>
+    </t>
+</templates>

@@ -1,0 +1,39 @@
+// Define Custom Colors
+$primary-color: #875A7B; // Odoo Purple
+$primary-dark: #714B67; // Navbar Purple
+$odoo-brand-color: #875A7B;
+
+// Overriding Odoo SCSS Variables
+$o-brand-primary: $primary-color;
+$o-brand-odoo: $primary-color;
+
+// Optional: Customizing the Navbar
+$o-navbar-background-color: #1e1b4b; // Deep Indigo
+
+:root {
+    --o-brand-primary: #{$primary-color};
+    --o-brand-odoo: #{$primary-color};
+    
+    // Smooth transitions for buttons and links
+    --o-btn-primary-bg: #{$primary-color};
+    --o-btn-primary-border: #{$primary-dark};
+}
+
+.o_main_navbar {
+    background-color: $o-navbar-background-color !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    
+    .o_menu_brand {
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+}
+
+.btn-primary {
+    background-color: $primary-color !important;
+    border-color: $primary-dark !important;
+    
+    &:hover {
+        background-color: $primary-dark !important;
+    }
+}

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.new_theme</field>
+        <field name="model">res.config.settings</field>
+        <field name="priority" eval="90"/>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[hasclass('settings')]" position="inside">
+                <div class="app_settings_block" data-string="Theme Customization" string="Theme Customization" data-key="new_theme">
+                    <div class="d-flex justify-content-between">
+                        <h2>Theme Customization</h2>
+                        <button name="action_reset_theme" type="object" string="Reset to Default" class="btn btn-secondary"/>
+                    </div>
+                    <div class="row mt16 o_settings_container" id="new_theme_settings">
+                        <div class="col-12 col-lg-6 o_setting_box" title="Change the primary color of the Odoo interface.">
+                            <div class="o_setting_right_pane">
+                                <label for="theme_primary_color"/>
+                                <div class="text-muted">
+                                    Primary color for buttons, links, and active states.
+                                </div>
+                                <div class="content-group">
+                                    <div class="mt16">
+                                        <field name="theme_primary_color" widget="color"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-lg-6 o_setting_box" title="Change the navbar background color.">
+                            <div class="o_setting_right_pane">
+                                <label for="theme_navbar_color"/>
+                                <div class="text-muted">
+                                    Background color for the main top navigation bar.
+                                </div>
+                                <div class="content-group">
+                                    <div class="mt16">
+                                        <field name="theme_navbar_color" widget="color"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-lg-6 o_setting_box" title="Change the style of the app menu.">
+                            <div class="o_setting_right_pane">
+                                <label for="theme_menu_style"/>
+                                <div class="text-muted">
+                                    Choose the visual style and behavior of the main app menu.
+                                </div>
+                                <div class="content-group">
+                                    <div class="mt16">
+                                        <field name="theme_menu_style" widget="radio"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-lg-6 o_setting_box" title="When enabled, the navbar will hide automatically and show on hover.">
+                            <div class="o_setting_left_pane">
+                                <field name="theme_navbar_autohide"/>
+                            </div>
+                            <div class="o_setting_right_pane">
+                                <label for="theme_navbar_autohide"/>
+                                <div class="text-muted">
+                                    Automatically hide the navbar to maximize screen space.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </xpath>
+        </field>
+    </record>
+</odoo>
