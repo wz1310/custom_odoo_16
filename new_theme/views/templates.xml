@@ -88,7 +88,7 @@
                         margin: 0 !important;
                         padding: 0 !important;
                         border: none !important;
-                        background: #f8f9fa !important; /* Solid fallback base */
+                        background: transparent !important; 
                         z-index: 9999 !important;
                         display: block !important;
                     }
@@ -99,9 +99,10 @@
                         align-content: flex-start !important;
                         width: 100% !important;
                         height: 100% !important;
-                        background: radial-gradient(circle at top, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 100%) !important;
-                        backdrop-filter: blur(45px) saturate(160%) !important;
-                        -webkit-backdrop-filter: blur(45px) saturate(160%) !important;
+                        /* "Clear Water" Effect: Subtle blue tint, high saturation */
+                        background: radial-gradient(circle at top left, rgba(220, 240, 255, 0.1) 0%, rgba(255, 255, 255, 0) 100%) !important;
+                        backdrop-filter: blur(20px) saturate(200%) !important;
+                        -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
                         animation: slideDownBounce 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
                         padding: 100px 20px 50px !important;
                         overflow-y: auto !important;
