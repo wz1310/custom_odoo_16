@@ -27,12 +27,19 @@ class ResConfigSettings(models.TransientModel):
         default=False
     )
 
+    theme_modern_navbar = fields.Boolean(
+        string="Modern Minimalist Navbar",
+        config_parameter='new_theme.modern_navbar',
+        default=False
+    )
+
     def action_reset_theme(self):
         """ Reset theme colors to Odoo 16 Enterprise default values """
         self.env['ir.config_parameter'].sudo().set_param('new_theme.primary_color', '#875A7B')
         self.env['ir.config_parameter'].sudo().set_param('new_theme.navbar_color', '#714B67')
         self.env['ir.config_parameter'].sudo().set_param('new_theme.menu_style', 'default')
         self.env['ir.config_parameter'].sudo().set_param('new_theme.navbar_autohide', False)
+        self.env['ir.config_parameter'].sudo().set_param('new_theme.modern_navbar', False)
         return {
             'type': 'ir.actions.client',
             'tag': 'reload',
