@@ -1,0 +1,2 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_balance_sheet_report,access_balance_sheet_report,model_balance_sheet_report,account.group_account_user,1,1,1,1

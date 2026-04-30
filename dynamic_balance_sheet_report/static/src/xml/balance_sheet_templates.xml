@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="dynamic_balance_sheet_report.BalanceSheetReportTemplate" owl="1">
+        <div class="o_balance_sheet_report" style="height: 100%; display: flex; flex-direction: column; background: white;">
+            <style>
+                .o_balance_sheet_report { font-family: 'Inter', 'Segoe UI', sans-serif; color: #374151; }
+                .o_content_header { padding: 16px 24px; background: white; border-bottom: 1px solid #e5e7eb; }
+                .o_content_body { flex: 1; overflow-y: auto; padding: 24px; }
+                .o_filter_panel { 
+                    background: #f9fafb; 
+                    border: 1px solid #f3f4f6; 
+                    border-radius: 8px; 
+                    margin-bottom: 30px;
+                }
+                .o_report_container {
+                    border: 1px solid #e5e7eb;
+                    border-radius: 4px;
+                    overflow: hidden;
+                    background: white;
+                }
+            </style>
+            <div class="o_content_header">
+                <h1 class="o_content_title" style="font-size: 20px; font-weight: 600; margin: 0;">Balance Sheet Report</h1>
+            </div>
+            <div class="o_content_body">
+                <div class="o_filter_panel p-4">
+                    <div class="row g-3">
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold">START DATE</label>
+                            <input type="date" t-att-value="state.date_from" class="form-control form-control-sm" t-on-change="(ev) => state.date_from = ev.target.value"/>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold">END DATE</label>
+                            <input type="date" t-att-value="state.date_to" class="form-control form-control-sm" t-on-change="(ev) => state.date_to = ev.target.value"/>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold">TARGET MOVES</label>
+                            <select class="form-select form-select-sm" t-att-value="state.target_move" t-on-change="(ev) => state.target_move = ev.target.value">
+                                <option value="posted">All Posted Entries</option>
+                                <option value="all">All Entries</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold">COMPANY</label>
+                            <select class="form-select form-select-sm" t-att-value="state.company_id" t-on-change="(ev) => state.company_id = ev.target.value ? parseInt(ev.target.value) : null">
+                                <t t-foreach="state.companies or []" t-as="company" t-key="company.id">
+                                    <option t-att-value="company.id" t-att-selected="company.id === state.company_id">
+                                        <t t-esc="company.name"/>
+                                    </option>
+                                </t>
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end gap-2">
+                            <button class="btn btn-primary btn-sm px-3" t-on-click="loadData" t-att-disabled="state.loading">
+                                <t t-if="state.loading"><span class="spinner-border spinner-border-sm me-1"/> Loading...</t>
+                                <t t-else="">Generate Report</t>
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm px-3" t-on-click="exportExcel" t-att-disabled="!hasData">Export Excel</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div t-if="state.has_data" class="o_report_container">
+                    <BalanceSheetComponent 
+                        reportData="state.report_data" 
+                        expandedDetails="state.expandedDetails"
+                        toggleDetail="(key) => this.toggleDetail(key)"/>
+                </div>
+                <div t-else="" class="text-center py-5 border rounded bg-light">
+                    <p class="text-muted m-0">Set filters and click "Generate Report" to view results.</p>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="dynamic_balance_sheet_report.BalanceSheetRowTemplate" owl="1">
+        <tr class="bs-row" t-att-class="props.expandedDetails.has(key) ? 'expanded' : ''" 
+            t-on-click="() => props.toggleDetail(key)" style="cursor: pointer;">
+            <td class="bs-cell-name">
+                <div class="d-flex align-items-center" t-att-style="'padding-left: ' + (level * 20) + 'px'">
+                    <i class="oi bs-toggle-icon me-3" 
+                       t-att-class="props.expandedDetails.has(key) ? 'oi-chevron-bottom text-primary' : 'oi-chevron-right'"/>
+                    <span class="bs-acc-text">
+                        <span class="fw-bold text-muted me-2"><t t-esc="acc.code"/></span>
+                        <span t-att-class="props.expandedDetails.has(key) ? 'fw-bold' : ''"><t t-esc="acc.name"/></span>
+                        <i class="oi oi-more-v ms-2 text-muted" style="font-size: 10px; opacity: 0.2;"/>
+                    </span>
+                </div>
+            </td>
+            <td class="bs-cell-amount text-end">
+                <span t-att-class="acc.balance &lt; 0 ? 'text-danger' : 'text-dark'" t-att-style="props.expandedDetails.has(key) ? 'font-weight: 700;' : ''">
+                    <t t-esc="formatAmount(acc.balance)"/>
+                </span>
+            </td>
+        </tr>
+        <!-- Hierarchical Transactions -->
+        <t t-if="props.expandedDetails.has(key)">
+            <!-- Detail Header -->
+            <tr class="bs-detail-header-row bg-light bg-opacity-50">
+                <td class="bs-cell-name">
+                    <div class="d-flex align-items-center" t-att-style="'padding-left: ' + ((level + 1) * 20) + 'px'">
+                        <div class="bs-line-connector me-3" style="opacity: 0;"/>
+                        <div class="row w-100 g-0 align-items-center fw-bold text-uppercase" style="font-size: 10px; color: #4b5563; letter-spacing: 0.5px;">
+                            <div class="col-2">Date</div>
+                            <div class="col-4">Reference</div>
+                            <div class="col-3 text-end">Debit</div>
+                            <div class="col-3 text-end">Credit</div>
+                        </div>
+                    </div>
+                </td>
+                <td class="text-end fw-bold text-uppercase ps-3" style="font-size: 10px; color: #4b5563; padding-right: 16px;">Balance</td>
+            </tr>
+            <!-- Detail Data -->
+            <t t-if="acc.lines and acc.lines.length > 0">
+                <t t-foreach="acc.lines" t-as="line" t-key="line.id">
+                    <tr class="bs-line-hierarchical">
+                        <td class="bs-cell-name">
+                            <div class="d-flex align-items-center" t-att-style="'padding-left: ' + ((level + 1) * 20) + 'px'">
+                                <div class="bs-line-connector me-3"/>
+                                <div class="row w-100 g-0 align-items-center" style="font-size: 11px; color: black;">
+                                    <div class="col-2 text-truncate"><t t-esc="line.date"/></div>
+                                    <div class="col-4 text-truncate"><t t-esc="line.move_name"/></div>
+                                    <div class="col-3 text-end pe-2"><t t-esc="formatAmount(line.debit)"/></div>
+                                    <div class="col-3 text-end pe-2"><t t-esc="formatAmount(line.credit)"/></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-end align-middle fw-bold ps-3" style="font-size: 11px; color: black; padding-right: 16px;">
+                            <t t-esc="formatAmount(line.balance)"/>
+                        </td>
+                    </tr>
+                </t>
+            </t>
+            <t t-else="">
+                <tr>
+                    <td colspan="2" t-att-style="'padding-left: ' + ((level + 2) * 20) + 'px'" class="py-2 text-muted small italic">
+                        No transactions found.
+                    </td>
+                </tr>
+            </t>
+        </t>
+    </t>
+
+
+    <t t-name="dynamic_balance_sheet_report.BalanceSheetComponentTemplate" owl="1">
+        <div class="bs-container">
+            <style>
+                .bs-table { width: 100%; border-collapse: collapse; }
+                .bs-header-main { 
+                    background: #e5e7eb; 
+                    color: #111827; 
+                    font-weight: 700; 
+                    text-transform: uppercase; 
+                    padding: 8px 16px;
+                    font-size: 13px;
+                }
+                .bs-header-sub {
+                    font-weight: 700;
+                    padding: 12px 16px;
+                    border-bottom: 1px solid #f3f4f6;
+                    font-size: 14px;
+                    cursor: pointer;
+                    transition: background 0.2s;
+                }
+                .bs-header-sub:hover { background: #f9fafb; }
+                .bs-row { border-bottom: 1px solid #f3f4f6; transition: background 0.1s; }
+                .bs-row:hover { background: #f9fafb; }
+                .bs-cell-name { padding: 10px 16px; font-size: 13px; color: #4b5563; }
+                .bs-cell-amount { padding: 10px 16px; font-size: 13px; font-weight: 500; }
+                .bs-toggle-icon { font-size: 10px; cursor: pointer; color: #9ca3af; }
+                .bs-total-row { font-weight: 700; border-top: 1px solid #e5e7eb; background: #fafafa; }
+                .bs-detail-container { padding: 10px; background: #fdfdfd; border: 1px solid #f3f4f6; border-radius: 4px; margin: 5px 0 15px 0; }
+                .text-danger { color: #dc2626 !important; }
+                .bs-line-hierarchical { border-bottom: 1px solid #f9fafb; }
+                .bs-line-hierarchical:hover { background: #fdfdfd; }
+                .bs-line-connector { 
+                    width: 12px; 
+                    height: 12px; 
+                    border-left: 1px solid #9ca3af; 
+                    border-bottom: 1px solid #9ca3af; 
+                    margin-top: -6px;
+                }
+            </style>
+            
+            <table class="bs-table">
+                <tbody>
+                    <!-- ASSETS -->
+                    <tr><td colspan="2" class="bs-header-main">ASSETS</td></tr>
+                    
+                    <!-- Current Assets -->
+                    <t t-if="props.reportData.assets_current and props.reportData.assets_current.length > 0">
+                        <tr class="bs-header-sub" t-on-click="() => props.toggleDetail('section_assets_current')">
+                            <td colspan="2" style="padding-left: 24px;">
+                                <i class="oi me-2 text-primary" t-att-class="props.expandedDetails.has('section_assets_current') ? 'oi-chevron-bottom' : 'oi-chevron-right'" style="font-size: 10px;"/>
+                                Current Assets
+                            </td>
+                        </tr>
+                        <t t-if="props.expandedDetails.has('section_assets_current')">
+                            <t t-foreach="props.reportData.assets_current" t-as="acc" t-key="acc.code">
+                                <t t-call="dynamic_balance_sheet_report.BalanceSheetRowTemplate">
+                                    <t t-set="key" t-value="'asset_current_' + acc.code"/>
+                                    <t t-set="level" t-value="2"/>
+                                </t>
+                            </t>
+                        </t>
+                        <tr class="bs-total-row">
+                            <td class="bs-cell-name" style="padding-left: 44px;">Total Current Assets</td>
+                            <td class="bs-cell-amount text-end"><t t-esc="formatAmount(props.reportData.totals.assets_current)"/></td>
+                        </tr>
+                    </t>
+
+                    <!-- Non-Current Assets -->
+                    <t t-if="props.reportData.assets_non_current and props.reportData.assets_non_current.length > 0">
+                        <tr class="bs-header-sub" t-on-click="() => props.toggleDetail('section_assets_non_current')">
+                            <td colspan="2" style="padding-left: 24px;">
+                                <i class="oi me-2 text-primary" t-att-class="props.expandedDetails.has('section_assets_non_current') ? 'oi-chevron-bottom' : 'oi-chevron-right'" style="font-size: 10px;"/>
+                                Non-Current Assets
+                            </td>
+                        </tr>
+                        <t t-if="props.expandedDetails.has('section_assets_non_current')">
+                            <t t-foreach="props.reportData.assets_non_current" t-as="acc" t-key="acc.code">
+                                <t t-call="dynamic_balance_sheet_report.BalanceSheetRowTemplate">
+                                    <t t-set="key" t-value="'asset_non_current_' + acc.code"/>
+                                    <t t-set="level" t-value="2"/>
+                                </t>
+                            </t>
+                        </t>
+                        <tr class="bs-total-row">
+                            <td class="bs-cell-name" style="padding-left: 44px;">Total Non-Current Assets</td>
+                            <td class="bs-cell-amount text-end"><t t-esc="formatAmount(props.reportData.totals.assets_non_current)"/></td>
+                        </tr>
+                    </t>
+
+                    <tr class="bs-total-row" style="background: #f3f4f6; font-size: 14px;">
+                        <td class="bs-cell-name">TOTAL ASSETS</td>
+                        <td class="bs-cell-amount text-end" t-att-class="props.reportData.totals.total_assets &lt; 0 ? 'text-danger' : ''">
+                            <t t-esc="formatAmount(props.reportData.totals.total_assets)"/>
+                        </td>
+                    </tr>
+
+                    <!-- LIABILITIES AND EQUITY -->
+                    <tr><td colspan="2" class="bs-header-main" style="margin-top: 20px;">LIABILITIES AND EQUITY</td></tr>
+                    
+                    <!-- Current Liabilities -->
+                    <t t-if="props.reportData.liabilities_current and props.reportData.liabilities_current.length > 0">
+                        <tr class="bs-header-sub" t-on-click="() => props.toggleDetail('section_liabilities_current')">
+                            <td colspan="2" style="padding-left: 24px;">
+                                <i class="oi me-2 text-primary" t-att-class="props.expandedDetails.has('section_liabilities_current') ? 'oi-chevron-bottom' : 'oi-chevron-right'" style="font-size: 10px;"/>
+                                Current Liabilities
+                            </td>
+                        </tr>
+                        <t t-if="props.expandedDetails.has('section_liabilities_current')">
+                            <t t-foreach="props.reportData.liabilities_current" t-as="acc" t-key="acc.code">
+                                <t t-call="dynamic_balance_sheet_report.BalanceSheetRowTemplate">
+                                    <t t-set="key" t-value="'liab_current_' + acc.code"/>
+                                    <t t-set="level" t-value="2"/>
+                                </t>
+                            </t>
+                        </t>
+                        <tr class="bs-total-row">
+                            <td class="bs-cell-name" style="padding-left: 44px;">Total Current Liabilities</td>
+                            <td class="bs-cell-amount text-end"><t t-esc="formatAmount(props.reportData.totals.liabilities_current)"/></td>
+                        </tr>
+                    </t>
+
+                    <!-- Equity -->
+                    <t t-if="props.reportData.equity and props.reportData.equity.length > 0">
+                        <tr class="bs-header-sub" t-on-click="() => props.toggleDetail('section_equity')">
+                            <td colspan="2" style="padding-left: 24px;">
+                                <i class="oi me-2 text-primary" t-att-class="props.expandedDetails.has('section_equity') ? 'oi-chevron-bottom' : 'oi-chevron-right'" style="font-size: 10px;"/>
+                                Equity
+                            </td>
+                        </tr>
+                        <t t-if="props.expandedDetails.has('section_equity')">
+                            <t t-foreach="props.reportData.equity" t-as="acc" t-key="acc.code">
+                                <t t-call="dynamic_balance_sheet_report.BalanceSheetRowTemplate">
+                                    <t t-set="key" t-value="'equity_' + acc.code"/>
+                                    <t t-set="level" t-value="2"/>
+                                </t>
+                            </t>
+                        </t>
+                        <tr class="bs-total-row">
+                            <td class="bs-cell-name" style="padding-left: 44px;">Total Equity</td>
+                            <td class="bs-cell-amount text-end"><t t-esc="formatAmount(props.reportData.totals.total_equity)"/></td>
+                        </tr>
+                    </t>
+
+                    <tr class="bs-total-row" style="background: #f3f4f6; font-size: 14px;">
+                        <td class="bs-cell-name">TOTAL LIABILITIES AND EQUITY</td>
+                        <td class="bs-cell-amount text-end" t-att-class="props.reportData.totals.total_liabilities_equity &lt; 0 ? 'text-danger' : ''">
+                            <t t-esc="formatAmount(props.reportData.totals.total_liabilities_equity)"/>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div t-if="props.reportData.totals.total_assets != props.reportData.totals.total_liabilities_equity" 
+                 class="p-3 mt-3 border border-warning rounded bg-warning bg-opacity-10 text-warning-emphasis small">
+                <strong>Attention:</strong> The Balance Sheet is not balanced. Difference: 
+                <t t-esc="formatAmount(Math.abs(props.reportData.totals.total_assets - props.reportData.totals.total_liabilities_equity))"/>
+            </div>
+        </div>
+    </t>
+</templates>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Client Action -->
+    <record id="action_balance_sheet_report" model="ir.actions.client">
+        <field name="name">Balance Sheet Report</field>
+        <field name="tag">dynamic_balance_sheet_report.balance_sheet_report</field>
+    </record>
+
+    <!-- Menu Items -->
+    <menuitem id="menu_balance_sheet_root"
+              name="Balance Sheet"
+              parent="account.menu_finance"
+              sequence="15"/>
+
+    <menuitem id="menu_balance_sheet_report"
+              name="Balance Sheet Report"
+              parent="menu_balance_sheet_root"
+              action="action_balance_sheet_report"
+              sequence="10"/>
+</odoo>
