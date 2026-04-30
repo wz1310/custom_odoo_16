@@ -24,25 +24,46 @@
             </div>
             <div class="o_content_body">
                 <div class="o_filter_panel p-4">
-                    <div class="row g-3">
-                        <div class="col-md-2">
-                            <label class="form-label small fw-bold">START DATE</label>
-                            <input type="date" t-att-value="state.date_from" class="form-control form-control-sm" t-on-change="(ev) => state.date_from = ev.target.value"/>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label small fw-bold">END DATE</label>
-                            <input type="date" t-att-value="state.date_to" class="form-control form-control-sm" t-on-change="(ev) => state.date_to = ev.target.value"/>
+                    <div class="row g-3 align-items-end">
+                        <!-- Date Filter Dropdown -->
+                        <div class="col-md-auto">
+                            <label class="form-label small fw-bold d-block">DATE</label>
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="oi oi-calendar"/>
+                                    <span>As of <t t-esc="formattedDate"/></span>
+                                </button>
+                                <ul class="dropdown-menu shadow-sm p-2" style="min-width: 250px;">
+                                    <li><a class="dropdown-item d-flex justify-content-between align-items-center py-2" href="#" t-on-click="() => this.applyDatePreset('today')">
+                                        Today <i t-if="state.date_filter_type === 'today'" class="oi oi-check text-primary"/>
+                                    </a></li>
+                                    <li><a class="dropdown-item d-flex justify-content-between align-items-center py-2" href="#" t-on-click="() => this.applyDatePreset('end_month')">
+                                        End of Month <i t-if="state.date_filter_type === 'end_month'" class="oi oi-check text-primary"/>
+                                    </a></li>
+                                    <li><a class="dropdown-item d-flex justify-content-between align-items-center py-2" href="#" t-on-click="() => this.applyDatePreset('end_quarter')">
+                                        End of Quarter <i t-if="state.date_filter_type === 'end_quarter'" class="oi oi-check text-primary"/>
+                                    </a></li>
+                                    <li><a class="dropdown-item d-flex justify-content-between align-items-center py-2" href="#" t-on-click="() => this.applyDatePreset('end_year')">
+                                        End of Year <i t-if="state.date_filter_type === 'end_year'" class="oi oi-check text-primary"/>
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"/></li>
+                                    <li class="px-3 py-2">
+                                        <label class="form-label small fw-bold mb-1">Specific Date</label>
+                                        <input type="date" t-att-value="state.date" class="form-control form-control-sm" t-on-change="onDateChange"/>
+                                    </li>
+                                </ul>
+                            </div>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small fw-bold">TARGET MOVES</label>
-                            <select class="form-select form-select-sm" t-att-value="state.target_move" t-on-change="(ev) => state.target_move = ev.target.value">
+                            <select class="form-select form-select-sm" t-att-value="state.target_move" t-on-change="onTargetMoveChange">
                                 <option value="posted">All Posted Entries</option>
                                 <option value="all">All Entries</option>
                             </select>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small fw-bold">COMPANY</label>
-                            <select class="form-select form-select-sm" t-att-value="state.company_id" t-on-change="(ev) => state.company_id = ev.target.value ? parseInt(ev.target.value) : null">
+                            <select class="form-select form-select-sm" t-att-value="state.company_id" t-on-change="onCompanyChange">
                                 <t t-foreach="state.companies or []" t-as="company" t-key="company.id">
                                     <option t-att-value="company.id" t-att-selected="company.id === state.company_id">
                                         <t t-esc="company.name"/>
@@ -64,7 +85,7 @@
                     <BalanceSheetComponent 
                         reportData="state.report_data" 
                         expandedDetails="state.expandedDetails"
-                        toggleDetail="(key) => this.toggleDetail(key)"/>
+                        toggleDetail="toggleDetail"/>
                 </div>
                 <div t-else="" class="text-center py-5 border rounded bg-light">
                     <p class="text-muted m-0">Set filters and click "Generate Report" to view results.</p>

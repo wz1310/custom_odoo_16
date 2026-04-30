@@ -23,17 +23,15 @@ export class BalanceSheetReport extends Component {
         this.rpc = useService("rpc");
         this.companyService = useService("company");
         this.notification = useService("notification");
+        this.toggleDetail = this.toggleDetail.bind(this);
 
         this.state = useState({
             loading: false,
-            date_from: new Date().toISOString().slice(0, 10),
-            date_to: new Date().toISOString().slice(0, 10),
+            date: new Date().toISOString().slice(0, 10),
+            date_filter_type: "today",
             target_move: "posted",
             company_id: null,
             companies: [],
-            account_range_type: "all",
-            show_unposted: false,
-            show_zero: false,
             report_data: null,
             has_data: false,
             expandedDetails: new Set(),
@@ -41,8 +39,7 @@ export class BalanceSheetReport extends Component {
 
         onWillStart(async () => {
             await this.loadInitialData();
-            this.state.date_from = new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10);
-            this.state.date_to = new Date().toISOString().slice(0, 10);
+            this.state.date = new Date().toISOString().slice(0, 10);
         });
     }
 
@@ -71,16 +68,48 @@ export class BalanceSheetReport extends Component {
         }
     }
 
+    onDateChange(ev) {
+        this.state.date = ev.target.value;
+        this.state.date_filter_type = "specific";
+    }
+
+    applyDatePreset(type) {
+        const now = new Date();
+        let targetDate = new Date();
+
+        if (type === "today") {
+            targetDate = now;
+        } else if (type === "end_month") {
+            targetDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        } else if (type === "end_quarter") {
+            const quarter = Math.floor(now.getMonth() / 3);
+            targetDate = new Date(now.getFullYear(), (quarter + 1) * 3, 0);
+        } else if (type === "end_year") {
+            targetDate = new Date(now.getFullYear(), 12, 0);
+        }
+
+        this.state.date = targetDate.toISOString().slice(0, 10);
+        this.state.date_filter_type = type;
+        this.loadData();
+    }
+
+    onTargetMoveChange(ev) {
+        this.state.target_move = ev.target.value;
+    }
+
+    onCompanyChange(ev) {
+        this.state.company_id = ev.target.value ? parseInt(ev.target.value) : null;
+    }
+
     async loadData() {
         this.state.loading = true;
         this.state.has_data = false;
         try {
             const result = await this.rpc("/dynamic_balance_sheet_report/data", {
-                date_from: this.state.date_from,
-                date_to: this.state.date_to,
+                date_from: false,
+                date_to: this.state.date,
                 target_move: this.state.target_move,
                 company_ids: this.state.company_id,
-                account_range_type: this.state.account_range_type,
                 show_unposted: this.state.show_unposted,
                 show_zero: this.state.show_zero,
             });
@@ -101,15 +130,17 @@ export class BalanceSheetReport extends Component {
         }
     }
 
+    get formattedDate() {
+        if (!this.state.date) return "";
+        const [year, month, day] = this.state.date.split("-");
+        return `${month}/${day}/${year}`;
+    }
+
     async exportExcel() {
         const url = `/dynamic_balance_sheet_report/export/excel?` +
-            `date_from=${this.state.date_from}` +
-            `&date_to=${this.state.date_to}` +
+            `date_to=${this.state.date}` +
             `&target_move=${this.state.target_move}` +
-            `&company_id=${this.state.company_id || ''}` +
-            `&account_range_type=${this.state.account_range_type}` +
-            `&show_unposted=${this.state.show_unposted}` +
-            `&show_zero=${this.state.show_zero}`;
+            `&company_id=${this.state.company_id || ''}`;
         window.location = url;
     }
 
