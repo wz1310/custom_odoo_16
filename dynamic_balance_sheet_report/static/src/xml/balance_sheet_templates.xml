@@ -355,7 +355,7 @@
             </tr>
             <!-- Detail Data -->
             <t t-if="acc.lines and acc.lines.length > 0">
-                <t t-foreach="acc.lines" t-as="line" t-key="line.id">
+                <t t-foreach="getVisibleLines(acc)" t-as="line" t-key="line.id">
                     <tr class="bs-line-hierarchical">
                         <td class="bs-cell-name">
                             <div class="d-flex align-items-center" t-att-style="'padding-left: ' + ((level + 1) * 20) + 'px'">
@@ -370,6 +370,18 @@
                         </td>
                         <td class="text-end align-middle fw-bold ps-3" style="font-size: 11px; color: black; padding-right: 16px;">
                             <t t-esc="formatAmount(line.balance)"/>
+                        </td>
+                    </tr>
+                </t>
+                <!-- Load More row -->
+                <t t-if="hasMore(acc)">
+                    <tr class="bs-load-more-row">
+                        <td colspan="2" t-att-style="'padding-left: ' + ((level + 1) * 20) + 'px'">
+                            <button class="btn btn-link btn-sm text-primary py-1 px-2"
+                                t-on-click.stop="() => this.loadMore(acc.code, acc.lines.length)">
+                                <i class="oi oi-arrow-down me-1" style="font-size: 10px;"/>
+                                Load More (<t t-esc="remainingCount(acc)"/> remaining)
+                            </button>
                         </td>
                     </tr>
                 </t>
@@ -423,6 +435,8 @@
                     border-bottom: 1px solid #9ca3af; 
                     margin-top: -6px;
                 }
+                .bs-load-more-row { border-bottom: 1px solid #f3f4f6; background: #fafafa; }
+                .bs-load-more-row:hover { background: #f3f4f6; }
             </style>
             
             <table class="bs-table">

@@ -8,6 +8,35 @@ class BalanceSheetComponent extends Component {
     static template = "dynamic_balance_sheet_report.BalanceSheetComponentTemplate";
     static props = ["reportData", "expandedDetails", "toggleDetail"];
 
+    setup() {
+        // Map of accCode -> number of visible lines (default 80)
+        this.visibleLines = useState({});
+    }
+
+    static PAGE_SIZE = 80;
+
+    getVisibleCount(accCode) {
+        return this.visibleLines[accCode] || BalanceSheetComponent.PAGE_SIZE;
+    }
+
+    loadMore(accCode, totalLines) {
+        const current = this.getVisibleCount(accCode);
+        this.visibleLines[accCode] = Math.min(current + BalanceSheetComponent.PAGE_SIZE, totalLines);
+    }
+
+    getVisibleLines(acc) {
+        const count = this.getVisibleCount(acc.code);
+        return (acc.lines || []).slice(0, count);
+    }
+
+    hasMore(acc) {
+        return (acc.lines || []).length > this.getVisibleCount(acc.code);
+    }
+
+    remainingCount(acc) {
+        return (acc.lines || []).length - this.getVisibleCount(acc.code);
+    }
+
     formatAmount(amount) {
         if (amount === null || amount === undefined) return "0.00";
         return Number(amount).toLocaleString(undefined, {
@@ -18,7 +47,6 @@ class BalanceSheetComponent extends Component {
 
     formatDate(dateStr) {
         if (!dateStr) return "";
-        // dateStr can be "YYYY-MM-DD" or a Date object string
         const [year, month, day] = String(dateStr).slice(0, 10).split("-");
         return `${day}/${month}/${year}`;
     }
