@@ -7,7 +7,7 @@ from odoo.tools.misc import xlsxwriter
 
 class BalanceSheetController(http.Controller):
 
-    def _get_report_data(self, date_from, date_to, target_move, company_id, account_range_type, show_unposted, show_zero):
+    def _get_report_data(self, date_from, date_to, target_move, company_id, account_range_type, show_unposted, show_zero, journal_ids=None):
         model = request.env['balance.sheet.report']
         # Create a temporary record for the report
         rec = model.create({
@@ -20,7 +20,7 @@ class BalanceSheetController(http.Controller):
             'show_zero': show_zero,
         })
         try:
-            return rec.get_balance_sheet_data()
+            return rec.get_balance_sheet_data(journal_ids=journal_ids)
         except Exception as e:
             # Log error and re-raise
             request.env.cr.rollback()
@@ -41,6 +41,7 @@ class BalanceSheetController(http.Controller):
         account_range_type = kwargs.get('account_range_type', 'all')
         show_unposted = kwargs.get('show_unposted', False)
         show_zero = kwargs.get('show_zero', False)
+        journal_ids = kwargs.get('journal_ids') or None
         
         if date_str:
             date_to = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -54,7 +55,7 @@ class BalanceSheetController(http.Controller):
         
         company_id = request.env['res.company'].browse(company_ids) if company_ids else request.env.company
         
-        return self._get_report_data(date_from, date_to, target_move, company_id, account_range_type, show_unposted, show_zero)
+        return self._get_report_data(date_from, date_to, target_move, company_id, account_range_type, show_unposted, show_zero, journal_ids=journal_ids)
 
     @http.route('/dynamic_balance_sheet_report/export/excel', type='http', auth='user')
     def export_excel(self, **kwargs):
@@ -65,6 +66,8 @@ class BalanceSheetController(http.Controller):
         account_range_type = kwargs.get('account_range_type', 'all')
         show_unposted = kwargs.get('show_unposted', 'false') == 'true'
         show_zero = kwargs.get('show_zero', 'false') == 'true'
+        journal_ids_str = kwargs.get('journal_ids', '')
+        journal_ids = [int(x) for x in journal_ids_str.split(',') if x.strip()] if journal_ids_str else None
         
         if date_from_str:
             date_from = datetime.strptime(date_from_str, '%Y-%m-%d').date()
@@ -78,7 +81,7 @@ class BalanceSheetController(http.Controller):
         
         company = request.env['res.company'].browse(int(company_id)) if company_id else request.env.company
         
-        data = self._get_report_data(date_from, date_to, target_move, company, account_range_type, show_unposted, show_zero)
+        data = self._get_report_data(date_from, date_to, target_move, company, account_range_type, show_unposted, show_zero, journal_ids=journal_ids)
         
         output = io.BytesIO()
         workbook = xlsxwriter.Workbook(output, {'in_memory': True})

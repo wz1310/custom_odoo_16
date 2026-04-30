@@ -16,14 +16,25 @@ class BalanceSheetReport(models.TransientModel):
     show_zero = fields.Boolean(string='Show Zero Balance Accounts', default=False)
 
     @api.model
-    def _get_account_balances_with_lines(self, date_from, date_to, target_move, company_id):
+    def _get_account_balances_with_lines(self, date_from, date_to, target_move, company_id, journal_ids=None):
         """Calculate account balances with line details for balance sheet."""
-        self.env.cr.execute("""
+        # aa.name is a jsonb translatable field in Odoo 17.
+        # Extract the user's language first, fallback to 'en_US'.
+        lang = self.env.lang or self.env.user.lang or 'en_US'
+
+        # Build query by string concatenation — never use .format() with %s params
+        # because Python's str.format() and psycopg2's %s both use % and will conflict.
+        query = """
             SELECT 
                 aa.id as account_id,
                 aa.code,
-                aa.name,
+                COALESCE(
+                    aa.name->>%s,
+                    aa.name->>'en_US',
+                    aa.name->>( SELECT key FROM jsonb_each_text(aa.name) LIMIT 1 )
+                ) AS name,
                 aa.internal_group,
+                aa.account_type,
                 aa.currency_id,
                 SUM(aml.debit) as debit,
                 SUM(aml.credit) as credit,
@@ -32,14 +43,31 @@ class BalanceSheetReport(models.TransientModel):
             FROM account_move_line aml
             JOIN account_account aa ON aa.id = aml.account_id
             JOIN account_move am ON am.id = aml.move_id
-            WHERE aa.company_id = %s 
+            WHERE aa.company_id = %s
                 AND aa.deprecated = FALSE
-                AND am.state = %s
                 AND aml.date <= %s
                 AND (aml.date >= %s OR %s IS NULL)
-            GROUP BY aa.id, aa.code, aa.name, aa.internal_group, aa.currency_id
+        """
+        params = [lang, company_id.id, date_to, date_from, date_from]
+
+        # 'all' means both posted and draft — no state filter needed
+        # 'posted' means only posted entries
+        if target_move == 'posted':
+            query += " AND am.state = 'posted'"
+        else:
+            # all entries except cancelled
+            query += " AND am.state != 'cancel'"
+
+        if journal_ids:
+            query += " AND aml.journal_id = ANY(%s)"
+            params.append(journal_ids)
+
+        query += """
+            GROUP BY aa.id, aa.code, aa.name, aa.internal_group, aa.account_type, aa.currency_id
             ORDER BY aa.code
-        """, (company_id.id, target_move, date_to, date_from, date_from))
+        """
+
+        self.env.cr.execute(query, params)
         
         results = self.env.cr.dictfetchall()
         
@@ -55,7 +83,7 @@ class BalanceSheetReport(models.TransientModel):
                     SELECT 
                         aml.id,
                         aml.move_id,
-                        am.name as move_name,
+                        am.name AS move_name,
                         aml.ref,
                         aml.date,
                         aml.debit,
@@ -73,11 +101,18 @@ class BalanceSheetReport(models.TransientModel):
         return results
 
     def _is_current_account(self, account):
-        """Determine if account is current (typically receivable/payable/cash)."""
-        current_codes = ['10', '11', '12', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '40', '41', '42', '43', '44', '45', '46', '47', '48', '49', '50', '51', '52', '53', '54', '58', '59', '60', '61', '62', '63', '64', '65', '66', '67', '68', '69', '70', '71', '72', '73', '74', '75', '76', '77', '78', '79', '80', '81', '82', '83', '84', '85', '86', '87', '88', '89', '90', '91', '92', '93', '94', '95', '96', '97', '98', '99']
-        return account['code'][:2] in current_codes
+        """Determine if account is current based on Odoo account_type field."""
+        current_asset_types = {'asset_receivable', 'asset_cash', 'asset_current'}
+        current_liability_types = {'liability_payable', 'liability_credit_card', 'liability_current'}
+        account_type = account.get('account_type', '')
+        internal_group = account.get('internal_group', '')
+        if internal_group == 'asset':
+            return account_type in current_asset_types
+        elif internal_group == 'liability':
+            return account_type in current_liability_types
+        return False
 
-    def get_balance_sheet_data(self, date_from=None, date_to=None, target_move=None, company_id=None, account_range_type='all', show_unposted=False, show_zero=False):
+    def get_balance_sheet_data(self, date_from=None, date_to=None, target_move=None, company_id=None, account_range_type='all', show_unposted=False, show_zero=False, journal_ids=None):
         """Get formatted balance sheet data with optional parameters."""
         # Use current record if available, otherwise create temp
         if self:
@@ -90,7 +125,7 @@ class BalanceSheetReport(models.TransientModel):
         if not company_id:
             company_id = self.env.company
         
-        accounts_data = self._get_account_balances_with_lines(date_from, date_to, target_move, company_id)
+        accounts_data = self._get_account_balances_with_lines(date_from, date_to, target_move, company_id, journal_ids=journal_ids)
         
         # Filter accounts if needed
         if account_range_type == 'balance':
