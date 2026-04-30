@@ -43,6 +43,52 @@
                 .journal-tag .remove-btn:hover { color: #dc2626; }
                 .journal-dropdown-item { cursor: pointer; user-select: none; }
                 .journal-dropdown-item:hover { background: #f3f4f6; }
+                .export-modal-backdrop {
+                    position: fixed;
+                    inset: 0;
+                    background: rgba(0,0,0,0.35);
+                    z-index: 1055;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .export-modal {
+                    background: white;
+                    border-radius: 12px;
+                    padding: 28px 32px;
+                    width: 420px;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+                }
+                .export-option-card {
+                    border: 2px solid #e5e7eb;
+                    border-radius: 10px;
+                    padding: 16px 20px;
+                    cursor: pointer;
+                    transition: all 0.15s;
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 14px;
+                }
+                .export-option-card:hover {
+                    border-color: #6366f1;
+                    background: #f5f3ff;
+                }
+                .export-option-icon {
+                    font-size: 22px;
+                    margin-top: 2px;
+                    flex-shrink: 0;
+                }
+                .export-option-title {
+                    font-weight: 600;
+                    font-size: 14px;
+                    color: #111827;
+                    margin-bottom: 3px;
+                }
+                .export-option-desc {
+                    font-size: 12px;
+                    color: #6b7280;
+                    line-height: 1.4;
+                }
             </style>
             <div class="o_content_header">
                 <h1 class="o_content_title" style="font-size: 20px; font-weight: 600; margin: 0;">Balance Sheet Report</h1>
@@ -97,13 +143,59 @@
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small fw-bold">COMPANY</label>
-                            <select class="form-select form-select-sm" t-att-value="state.company_id" t-on-change="onCompanyChange">
-                                <t t-foreach="state.companies or []" t-as="company" t-key="company.id">
-                                    <option t-att-value="company.id" t-att-selected="company.id === state.company_id">
-                                        <t t-esc="company.name"/>
-                                    </option>
-                                </t>
-                            </select>
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start" type="button"
+                                    data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
+                                    <t t-if="state.selected_company_ids.length > 0">
+                                        <t t-esc="state.selected_company_ids.length"/> Selected
+                                    </t>
+                                    <t t-else="">All Companies</t>
+                                </button>
+                                <div class="dropdown-menu shadow-sm p-2" style="min-width: 280px; max-height: 380px; overflow-y: auto;">
+                                    <!-- All / Clear -->
+                                    <div class="d-flex gap-2 mb-2 pb-2 border-bottom">
+                                        <button class="btn btn-sm btn-outline-primary flex-fill" t-on-click.stop="selectAllCompanies">
+                                            <i class="oi oi-check me-1" style="font-size: 10px;"/> All
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary flex-fill" t-on-click.stop="clearAllCompanies">
+                                            <i class="oi oi-close me-1" style="font-size: 10px;"/> Clear
+                                        </button>
+                                    </div>
+                                    <!-- Search -->
+                                    <div class="mb-2 pb-2 border-bottom">
+                                        <input type="text"
+                                            class="form-control form-control-sm"
+                                            placeholder="Search company..."
+                                            t-att-value="state.company_search"
+                                            t-on-input.stop="(ev) => { state.company_search = ev.target.value; }"
+                                            t-on-click.stop="() => {}"/>
+                                    </div>
+                                    <!-- Selected chips -->
+                                    <t t-if="state.selected_company_ids.length > 0">
+                                        <div class="d-flex flex-wrap gap-1 mb-2 pb-2 border-bottom">
+                                            <t t-foreach="selectedCompanies" t-as="company" t-key="company.id">
+                                                <span class="journal-tag">
+                                                    <t t-esc="company.name"/>
+                                                    <button class="remove-btn" t-on-click.stop="() => this.removeCompany(company.id)" title="Remove">&#x2715;</button>
+                                                </span>
+                                            </t>
+                                        </div>
+                                    </t>
+                                    <!-- Checklist -->
+                                    <t t-foreach="filteredCompanies" t-as="company" t-key="company.id">
+                                        <div class="journal-dropdown-item px-2 py-1 rounded d-flex align-items-center gap-2"
+                                            t-on-click.stop="() => this.toggleCompany(company.id)">
+                                            <input type="checkbox" class="form-check-input mt-0"
+                                                t-att-checked="isCompanySelected(company.id)"
+                                                style="pointer-events: none;"/>
+                                            <span style="font-size: 13px; cursor: pointer;"><t t-esc="company.name"/></span>
+                                        </div>
+                                    </t>
+                                    <t t-if="filteredCompanies.length === 0">
+                                        <div class="px-2 py-2 text-muted small">No companies found</div>
+                                    </t>
+                                </div>
+                            </div>
                         </div>
                         <div class="col-md-4 d-flex align-items-end gap-2">
                             <button class="btn btn-primary btn-sm px-3" t-on-click="loadData" t-att-disabled="state.loading">
@@ -187,6 +279,40 @@
                     <p class="text-muted m-0">Set filters and click "Generate Report" to view results.</p>
                 </div>
             </div>
+
+            <!-- Export Modal -->
+            <t t-if="state.show_export_modal">
+                <div class="export-modal-backdrop" t-on-click="cancelExport">
+                    <div class="export-modal" t-on-click.stop="() => {}">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0 fw-bold" style="font-size: 16px;">Export to Excel</h5>
+                            <button class="btn-close btn-sm" t-on-click="cancelExport"/>
+                        </div>
+                        <p class="text-muted small mb-4">Choose the export format for your Balance Sheet report.</p>
+                        <div class="d-flex flex-column gap-3">
+                            <!-- Summary Only -->
+                            <div class="export-option-card" t-on-click="() => this.doExport(false)">
+                                <span class="export-option-icon">📊</span>
+                                <div>
+                                    <div class="export-option-title">Summary Only</div>
+                                    <div class="export-option-desc">Export account balances only — one row per account, no transaction breakdown.</div>
+                                </div>
+                            </div>
+                            <!-- With Transaction Details -->
+                            <div class="export-option-card" t-on-click="() => this.doExport(true)">
+                                <span class="export-option-icon">📋</span>
+                                <div>
+                                    <div class="export-option-title">With Transaction Details</div>
+                                    <div class="export-option-desc">Export full breakdown — includes every journal entry line under each account.</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4 text-end">
+                            <button class="btn btn-sm btn-outline-secondary" t-on-click="cancelExport">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </t>
         </div>
     </t>
 
@@ -235,7 +361,7 @@
                             <div class="d-flex align-items-center" t-att-style="'padding-left: ' + ((level + 1) * 20) + 'px'">
                                 <div class="bs-line-connector me-3"/>
                                 <div class="row w-100 g-0 align-items-center" style="font-size: 11px; color: black;">
-                                    <div class="col-2 text-truncate"><t t-esc="line.date"/></div>
+                                    <div class="col-2 text-truncate"><t t-esc="formatDate(line.date)"/></div>
                                     <div class="col-4 text-truncate"><t t-esc="line.move_name"/></div>
                                     <div class="col-3 text-end pe-2"><t t-esc="formatAmount(line.debit)"/></div>
                                     <div class="col-3 text-end pe-2"><t t-esc="formatAmount(line.credit)"/></div>

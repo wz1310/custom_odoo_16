@@ -2,7 +2,7 @@
 
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
-import { Component, onWillStart, useState, xml } from "@odoo/owl";
+import { Component, onWillStart, useState } from "@odoo/owl";
 
 class BalanceSheetComponent extends Component {
     static template = "dynamic_balance_sheet_report.BalanceSheetComponentTemplate";
@@ -14,6 +14,13 @@ class BalanceSheetComponent extends Component {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
         });
+    }
+
+    formatDate(dateStr) {
+        if (!dateStr) return "";
+        // dateStr can be "YYYY-MM-DD" or a Date object string
+        const [year, month, day] = String(dateStr).slice(0, 10).split("-");
+        return `${day}/${month}/${year}`;
     }
 }
 
@@ -31,15 +38,21 @@ export class BalanceSheetReport extends Component {
             date_from: new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10),
             date_filter_type: "today",
             target_move: "posted",
-            company_id: null,
+
+            // Company multi-select
             companies: [],
+            selected_company_ids: [],
+            company_search: "",
+
+            // Journal multi-select
             journals: [],
             selected_journal_ids: [],
-            journal_dropdown_open: false,
             journal_search: "",
+
             report_data: null,
             has_data: false,
             expandedDetails: new Set(),
+            show_export_modal: false,
         });
 
         onWillStart(async () => {
@@ -49,27 +62,24 @@ export class BalanceSheetReport extends Component {
         });
     }
 
+    // ── Initial load ──────────────────────────────────────────────────────────
+
     async loadInitialData() {
         try {
             const companies = await this.rpc("/web/dataset/call_kw", {
                 model: "res.company",
                 method: "search_read",
                 args: [[], ["id", "name"]],
-                kwargs: {},
+                kwargs: { order: "name asc" },
             });
             this.state.companies = companies;
 
-            const userCompany = await this.rpc("/web/dataset/call_kw", {
-                model: "res.users",
-                method: "read",
-                args: [[this.companyService.currentCompany.id], ["company_id"]],
-                kwargs: {},
-            });
-            if (userCompany && userCompany[0] && userCompany[0].company_id) {
-                this.state.company_id = userCompany[0].company_id[0];
+            // Pre-select current user's company
+            const currentCompanyId = this.companyService.currentCompany.id;
+            if (currentCompanyId) {
+                this.state.selected_company_ids = [currentCompanyId];
             }
 
-            // Load journals
             await this.loadJournals();
         } catch (error) {
             console.error('Failed to load initial data:', error);
@@ -79,7 +89,9 @@ export class BalanceSheetReport extends Component {
 
     async loadJournals() {
         try {
-            const domain = this.state.company_id ? [['company_id', '=', this.state.company_id]] : [];
+            const domain = this.state.selected_company_ids.length > 0
+                ? [['company_id', 'in', this.state.selected_company_ids]]
+                : [];
             const journals = await this.rpc("/web/dataset/call_kw", {
                 model: "account.journal",
                 method: "search_read",
@@ -87,10 +99,24 @@ export class BalanceSheetReport extends Component {
                 kwargs: { order: "name asc" },
             });
             this.state.journals = journals;
+            // Remove selected journals that no longer belong to selected companies
+            const validIds = journals.map(j => j.id);
+            this.state.selected_journal_ids = this.state.selected_journal_ids.filter(id => validIds.includes(id));
         } catch (error) {
             console.error('Failed to load journals:', error);
         }
     }
+
+    // ── Date helpers ──────────────────────────────────────────────────────────
+
+    _toDisplay(isoDate) {
+        if (!isoDate) return "";
+        const [year, month, day] = isoDate.split("-");
+        return `${day}/${month}/${year}`;
+    }
+
+    get formattedDate() { return this._toDisplay(this.state.date); }
+    get formattedDateFrom() { return this._toDisplay(this.state.date_from); }
 
     onDateChange(ev) {
         this.state.date = ev.target.value;
@@ -105,7 +131,7 @@ export class BalanceSheetReport extends Component {
     applyDatePreset(type) {
         const now = new Date();
         let targetDate = new Date();
-        let fromDate = new Date(now.getFullYear(), 0, 1); // default: start of year
+        let fromDate = new Date(now.getFullYear(), 0, 1);
 
         if (type === "today") {
             targetDate = now;
@@ -128,16 +154,54 @@ export class BalanceSheetReport extends Component {
         this.loadData();
     }
 
+    // ── Target moves ──────────────────────────────────────────────────────────
+
     onTargetMoveChange(ev) {
         this.state.target_move = ev.target.value;
     }
 
-    onCompanyChange(ev) {
-        this.state.company_id = ev.target.value ? parseInt(ev.target.value) : null;
-        // Reload journals when company changes
-        this.state.selected_journal_ids = [];
+    // ── Company multi-select ──────────────────────────────────────────────────
+
+    toggleCompany(companyId) {
+        const idx = this.state.selected_company_ids.indexOf(companyId);
+        if (idx === -1) {
+            this.state.selected_company_ids = [...this.state.selected_company_ids, companyId];
+        } else {
+            this.state.selected_company_ids = this.state.selected_company_ids.filter(id => id !== companyId);
+        }
         this.loadJournals();
     }
+
+    removeCompany(companyId) {
+        this.state.selected_company_ids = this.state.selected_company_ids.filter(id => id !== companyId);
+        this.loadJournals();
+    }
+
+    isCompanySelected(companyId) {
+        return this.state.selected_company_ids.includes(companyId);
+    }
+
+    selectAllCompanies() {
+        this.state.selected_company_ids = this.state.companies.map(c => c.id);
+        this.loadJournals();
+    }
+
+    clearAllCompanies() {
+        this.state.selected_company_ids = [];
+        this.loadJournals();
+    }
+
+    get selectedCompanies() {
+        return this.state.companies.filter(c => this.state.selected_company_ids.includes(c.id));
+    }
+
+    get filteredCompanies() {
+        const q = (this.state.company_search || "").toLowerCase().trim();
+        if (!q) return this.state.companies;
+        return this.state.companies.filter(c => c.name.toLowerCase().includes(q));
+    }
+
+    // ── Journal multi-select ──────────────────────────────────────────────────
 
     toggleJournal(journalId) {
         const idx = this.state.selected_journal_ids.indexOf(journalId);
@@ -174,6 +238,8 @@ export class BalanceSheetReport extends Component {
         return this.state.journals.filter(j => j.name.toLowerCase().includes(q));
     }
 
+    // ── Load report data ──────────────────────────────────────────────────────
+
     async loadData() {
         this.state.loading = true;
         this.state.has_data = false;
@@ -182,7 +248,7 @@ export class BalanceSheetReport extends Component {
                 date_from: this.state.date_from,
                 date_to: this.state.date,
                 target_move: this.state.target_move,
-                company_ids: this.state.company_id,
+                company_ids: this.state.selected_company_ids.length > 0 ? this.state.selected_company_ids : false,
                 journal_ids: this.state.selected_journal_ids.length > 0 ? this.state.selected_journal_ids : false,
                 show_unposted: this.state.show_unposted,
                 show_zero: this.state.show_zero,
@@ -204,29 +270,32 @@ export class BalanceSheetReport extends Component {
         }
     }
 
-    get formattedDate() {
-        if (!this.state.date) return "";
-        const [year, month, day] = this.state.date.split("-");
-        return `${month}/${day}/${year}`;
-    }
-
-    get formattedDateFrom() {
-        if (!this.state.date_from) return "";
-        const [year, month, day] = this.state.date_from.split("-");
-        return `${month}/${day}/${year}`;
-    }
+    // ── Export ────────────────────────────────────────────────────────────────
 
     async exportExcel() {
+        this.state.show_export_modal = true;
+    }
+
+    doExport(withDetail) {
+        this.state.show_export_modal = false;
         const journalParam = this.state.selected_journal_ids.length > 0
             ? `&journal_ids=${this.state.selected_journal_ids.join(',')}`
+            : '';
+        const companyParam = this.state.selected_company_ids.length > 0
+            ? `&company_ids=${this.state.selected_company_ids.join(',')}`
             : '';
         const url = `/dynamic_balance_sheet_report/export/excel?` +
             `date_from=${this.state.date_from}` +
             `&date_to=${this.state.date}` +
             `&target_move=${this.state.target_move}` +
-            `&company_id=${this.state.company_id || ''}` +
+            `&with_detail=${withDetail ? '1' : '0'}` +
+            companyParam +
             journalParam;
         window.location = url;
+    }
+
+    cancelExport() {
+        this.state.show_export_modal = false;
     }
 
     get hasData() {

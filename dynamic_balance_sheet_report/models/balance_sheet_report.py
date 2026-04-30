@@ -43,12 +43,14 @@ class BalanceSheetReport(models.TransientModel):
             FROM account_move_line aml
             JOIN account_account aa ON aa.id = aml.account_id
             JOIN account_move am ON am.id = aml.move_id
-            WHERE aa.company_id = %s
+            WHERE aa.company_id = ANY(%s)
                 AND aa.deprecated = FALSE
                 AND aml.date <= %s
                 AND (aml.date >= %s OR %s IS NULL)
         """
-        params = [lang, company_id.id, date_to, date_from, date_from]
+        # Support both single record and recordset (multi-company)
+        company_ids = company_id.ids if hasattr(company_id, 'ids') else [company_id.id]
+        params = [lang, company_ids, date_to, date_from, date_from]
 
         # 'all' means both posted and draft — no state filter needed
         # 'posted' means only posted entries
@@ -194,5 +196,5 @@ class BalanceSheetReport(models.TransientModel):
             },
             'date_from': str(date_from),
             'date_to': str(date_to),
-            'company_name': company_id.name if company_id else '',
+            'company_name': ', '.join(company_id.mapped('name')) if company_id else '',
         }
